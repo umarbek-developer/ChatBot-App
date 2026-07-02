@@ -1,0 +1,823 @@
+{
+  "info": {
+    "_postman_id": "bd93d5ec-fab9-4e49-bf5a-1598628032ce",
+    "name": "app",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "44540346"
+  },
+  "item": [
+    {
+      "name": "auth",
+      "item": [
+        {
+          "name": "forget-password",
+          "item": [
+            {
+              "name": "send-otp",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"mekop60271@hilostar.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/auth/forget-password/otp/",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "user",
+                    "auth",
+                    "forget-password",
+                    "otp",
+                    ""
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "success sent otp",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n    \"email\": \"mekop60271@hilostar.com\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{url}}/auth/forget-password/otp/",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "user",
+                        "auth",
+                        "forget-password",
+                        "otp",
+                        ""
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": null,
+                  "header": [
+                    {
+                      "key": "Date",
+                      "value": "Thu, 14 May 2026 14:13:35 GMT"
+                    },
+                    {
+                      "key": "Server",
+                      "value": "WSGIServer/0.2 CPython/3.9.6"
+                    },
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    },
+                    {
+                      "key": "Vary",
+                      "value": "Accept, origin"
+                    },
+                    {
+                      "key": "Allow",
+                      "value": "POST, OPTIONS"
+                    },
+                    {
+                      "key": "X-Frame-Options",
+                      "value": "DENY"
+                    },
+                    {
+                      "key": "Content-Length",
+                      "value": "51"
+                    },
+                    {
+                      "key": "X-Content-Type-Options",
+                      "value": "nosniff"
+                    },
+                    {
+                      "key": "Referrer-Policy",
+                      "value": "same-origin"
+                    },
+                    {
+                      "key": "Cross-Origin-Opener-Policy",
+                      "value": "same-origin"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n    \"message\": \"Verifications code sent to your email\"\n}"
+                }
+              ]
+            },
+            {
+              "name": "verifications otp",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"mekop60271@hilostar.com\",\n    \"code\": \"914847\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/auth/forget-password/otp/verify/",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "user",
+                    "auth",
+                    "forget-password",
+                    "otp",
+                    "verify",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "set-password",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"mekop60271@hilostar.com\",\n    \"new_password\": \"#Required123\",\n    \"new_password_again\": \"#Required123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/auth/forget-password/set/",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "user",
+                    "auth",
+                    "forget-password",
+                    "set",
+                    ""
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "not sent otp",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n    \"email\": \"mekop60271@hilostar.com\",\n    \"new_password\": \"#Required123\",\n    \"new_password_again\": \"#Required123\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{url}}/auth/forget-password/set/",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "user",
+                        "auth",
+                        "forget-password",
+                        "set",
+                        ""
+                      ]
+                    }
+                  },
+                  "status": "Bad Request",
+                  "code": 400,
+                  "_postman_previewlanguage": null,
+                  "header": [
+                    {
+                      "key": "Date",
+                      "value": "Thu, 14 May 2026 14:10:43 GMT"
+                    },
+                    {
+                      "key": "Server",
+                      "value": "WSGIServer/0.2 CPython/3.9.6"
+                    },
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    },
+                    {
+                      "key": "Vary",
+                      "value": "Accept, origin"
+                    },
+                    {
+                      "key": "Allow",
+                      "value": "POST, OPTIONS"
+                    },
+                    {
+                      "key": "X-Frame-Options",
+                      "value": "DENY"
+                    },
+                    {
+                      "key": "Content-Length",
+                      "value": "33"
+                    },
+                    {
+                      "key": "X-Content-Type-Options",
+                      "value": "nosniff"
+                    },
+                    {
+                      "key": "Referrer-Policy",
+                      "value": "same-origin"
+                    },
+                    {
+                      "key": "Cross-Origin-Opener-Policy",
+                      "value": "same-origin"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n    \"error\": \"Something went wrong!\"\n}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "change-password",
+          "item": [
+            {
+              "name": "change-password",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/auth/change-password/",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "user",
+                    "auth",
+                    "change-password",
+                    ""
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "success message",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{url}}/auth/change-password/",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "user",
+                        "auth",
+                        "change-password",
+                        ""
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": null,
+                  "header": [
+                    {
+                      "key": "Date",
+                      "value": "Sat, 16 May 2026 13:24:37 GMT"
+                    },
+                    {
+                      "key": "Server",
+                      "value": "WSGIServer/0.2 CPython/3.9.6"
+                    },
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    },
+                    {
+                      "key": "Vary",
+                      "value": "Accept, origin"
+                    },
+                    {
+                      "key": "Allow",
+                      "value": "GET, POST, HEAD, OPTIONS"
+                    },
+                    {
+                      "key": "X-Frame-Options",
+                      "value": "DENY"
+                    },
+                    {
+                      "key": "Content-Length",
+                      "value": "60"
+                    },
+                    {
+                      "key": "X-Content-Type-Options",
+                      "value": "nosniff"
+                    },
+                    {
+                      "key": "Referrer-Policy",
+                      "value": "same-origin"
+                    },
+                    {
+                      "key": "Cross-Origin-Opener-Policy",
+                      "value": "same-origin"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n    \"message\": \"you can change your password within 15 minutes\"\n}"
+                },
+                {
+                  "name": "hali o'zgartirishga dostup bor",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{url}}/auth/change-password/",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "user",
+                        "auth",
+                        "change-password",
+                        ""
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": null,
+                  "header": [
+                    {
+                      "key": "Date",
+                      "value": "Sat, 16 May 2026 13:24:49 GMT"
+                    },
+                    {
+                      "key": "Server",
+                      "value": "WSGIServer/0.2 CPython/3.9.6"
+                    },
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    },
+                    {
+                      "key": "Vary",
+                      "value": "Accept, origin"
+                    },
+                    {
+                      "key": "Allow",
+                      "value": "GET, POST, HEAD, OPTIONS"
+                    },
+                    {
+                      "key": "X-Frame-Options",
+                      "value": "DENY"
+                    },
+                    {
+                      "key": "Content-Length",
+                      "value": "76"
+                    },
+                    {
+                      "key": "X-Content-Type-Options",
+                      "value": "nosniff"
+                    },
+                    {
+                      "key": "Referrer-Policy",
+                      "value": "same-origin"
+                    },
+                    {
+                      "key": "Cross-Origin-Opener-Policy",
+                      "value": "same-origin"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n    \"message\": \"you can change your password within 2026-05-16 18:39:37.860925\"\n}"
+                }
+              ]
+            },
+            {
+              "name": "set-change-password",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"old_password\": \"#Required123\",\n    \"new_password\": \"#Fintechhub1234\",\n    \"new_password2\": \"#Fintechhub1234\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/auth/change-password/",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "user",
+                    "auth",
+                    "change-password",
+                    ""
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "o'zgarish tugagan bo'lsa",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n    \"old_password\": \"#Required123\",\n    \"new_password\": \"#Fintechhub1234\",\n    \"new_password2\": \"#Fintechhub1234\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{url}}/auth/change-password/",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "user",
+                        "auth",
+                        "change-password",
+                        ""
+                      ]
+                    }
+                  },
+                  "status": "Bad Request",
+                  "code": 400,
+                  "_postman_previewlanguage": null,
+                  "header": [
+                    {
+                      "key": "Date",
+                      "value": "Sat, 16 May 2026 13:24:07 GMT"
+                    },
+                    {
+                      "key": "Server",
+                      "value": "WSGIServer/0.2 CPython/3.9.6"
+                    },
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    },
+                    {
+                      "key": "Vary",
+                      "value": "Accept, origin"
+                    },
+                    {
+                      "key": "Allow",
+                      "value": "GET, POST, HEAD, OPTIONS"
+                    },
+                    {
+                      "key": "X-Frame-Options",
+                      "value": "DENY"
+                    },
+                    {
+                      "key": "Content-Length",
+                      "value": "45"
+                    },
+                    {
+                      "key": "X-Content-Type-Options",
+                      "value": "nosniff"
+                    },
+                    {
+                      "key": "Referrer-Policy",
+                      "value": "same-origin"
+                    },
+                    {
+                      "key": "Cross-Origin-Opener-Policy",
+                      "value": "same-origin"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n    \"error\": \"You can open change request first\"\n}"
+                }
+              ]
+            }
+          ],
+          "auth": {
+            "type": "bearer",
+            "bearer": [
+              {
+                "key": "token",
+                "value": "{{access_token}}",
+                "type": "string"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {},
+                "exec": [
+                  ""
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {},
+                "exec": [
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "change-email",
+          "item": [
+            {
+              "name": "change-email",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/auth/change-email/",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "user",
+                    "auth",
+                    "change-email",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "change-email-2",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"lederas633@nriza.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/auth/change-email/",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "user",
+                    "auth",
+                    "change-email",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "verification-code-verifi",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"code\": \"927953\"\n    // \"code\": \"489878\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/auth/change-email/verification/",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "user",
+                    "auth",
+                    "change-email",
+                    "verification",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "verifications-code-resend",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/auth/change-email/verification/resend/otp/",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "user",
+                    "auth",
+                    "change-email",
+                    "verification",
+                    "resend",
+                    "otp",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "auth": {
+            "type": "bearer",
+            "bearer": [
+              {
+                "key": "token",
+                "value": "{{access_token}}",
+                "type": "string"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {},
+                "exec": [
+                  ""
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {},
+                "exec": [
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"lederas633@nriza.com\",\n    \"password\": \"Qwerty123#\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/auth/login/",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "user",
+                "auth",
+                "login",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "register",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"first_name\": \"Abror\",\n    \"last_name\": \"Rahmatullayev\",\n    \"email\": \"xetef78552@nriza.com\",\n    \"password\": \"Qwerty123#\",\n    \"password2\": \"Qwerty123#\",\n    // \"otp_type\": \"link\"\n    \"otp_type\": \"otp\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/auth/register/",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "auth",
+                "auth",
+                "register",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "verifi otp email",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"lederas633@nriza.com\",\n    \"code\": \"626230\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/auth/register/otp/verify/",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "user",
+                "auth",
+                "register",
+                "otp",
+                "verify",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "auth resend code",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"mekop60271@hilostar.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/auth/resend/otp/",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "user",
+                "auth",
+                "resend",
+                "otp",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+  
+}
