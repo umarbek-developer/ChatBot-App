@@ -735,6 +735,8 @@ function chatApp(){
       if(!me) return;                 // resolveUser() redirects on failure
       this.me = me; this.authed = true;
       this.members = [this.me];
+      // Remember this room so the root entry (/) can return the user here.
+      try{ localStorage.setItem('pulse.lastroom', this.room); }catch(_){}
 
       this.loadCache();
       this.connect();
@@ -748,13 +750,15 @@ function chatApp(){
       setTimeout(()=>{ this.loading=false; this.scrollToBottom(true); }, 1500);
     },
     gotoLogin(){ location.href='/login/?next='+encodeURIComponent(location.pathname); },
+    // Clear a stale/invalid session so the root entry (/) won't bounce back here.
+    clearAuthAndLogin(){ localStorage.removeItem('pulse.access'); localStorage.removeItem('pulse.refresh'); this.gotoLogin(); },
     async resolveUser(){
       let res = await fetch('/api/v1/accounts/me/', {headers:{Authorization:'Bearer '+localStorage.getItem('pulse.access')}});
       if(res.status===401){
-        if(!await this.refreshToken()){ this.gotoLogin(); return null; }
+        if(!await this.refreshToken()){ this.clearAuthAndLogin(); return null; }
         res = await fetch('/api/v1/accounts/me/', {headers:{Authorization:'Bearer '+localStorage.getItem('pulse.access')}});
       }
-      if(!res.ok){ this.gotoLogin(); return null; }
+      if(!res.ok){ this.clearAuthAndLogin(); return null; }
       const d = (await res.json()).data;
       const name = (d.profile.display_name || d.full_name || d.email.split('@')[0]).trim();
       return { id:d.id, name, color:this.colorFor(d.id), username:d.profile.username, avatar:d.profile.avatar, email:d.email, authenticated:true };

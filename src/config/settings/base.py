@@ -188,6 +188,12 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 AUTH_USER_MODEL = 'users.User'
 
+# Entry points (client-side JWT gate uses these paths; also correct for any
+# @login_required view / the admin login redirect).
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/chat/'
+LOGOUT_REDIRECT_URL = '/login/'
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 

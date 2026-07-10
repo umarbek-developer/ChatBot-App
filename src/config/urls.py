@@ -6,9 +6,9 @@ from django.views.generic import TemplateView
 from apps.chat.views import index, room
 
 urlpatterns = [
-    path('', TemplateView.as_view(
-        template_name='index.html'
-    )),
+    # Single root entry point: routes to the chat workspace or the login page
+    # based on the client-side auth token (see templates/entry.html).
+    path('', TemplateView.as_view(template_name='entry.html'), name='root'),
     path('api/v1/', include('api.urls')),
     path('admin/', admin.site.urls),
 

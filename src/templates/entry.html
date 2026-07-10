@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pulse</title>
+  <meta name="robots" content="noindex"/>
+  <style>html,body{height:100%;margin:0;background:#0F172A}</style>
+  <script>
+    // Single root entry point. Authentication is a client-side JWT (localStorage),
+    // so the auth decision must happen here rather than server-side:
+    //   • token present  -> enter the chat workspace (last opened chat, or lobby)
+    //   • no token        -> the Pulse login page
+    // The chat workspace re-validates the token with /accounts/me and bounces
+    // back to /login (clearing a stale token) if it is no longer valid.
+    (function () {
+      try {
+        var token = localStorage.getItem('pulse.access');
+        if (token) {
+          var last = localStorage.getItem('pulse.lastroom');
+          window.location.replace(last ? '/chat/' + encodeURIComponent(last) + '/' : '/chat/');
+        } else {
+          window.location.replace('/login/');
+        }
+      } catch (e) {
+        window.location.replace('/login/');
+      }
+    })();
+  </script>
+</head>
+<body></body>
+</html>
