@@ -216,3 +216,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# User-uploaded media (avatars, group images, voice messages) — never commit
+media/
+src/media/
+# Non-static images content dir (static/images/ stays tracked as a UI asset)
+src/images/
