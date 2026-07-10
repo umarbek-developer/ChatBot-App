@@ -569,7 +569,7 @@
             <template x-if="existingSlug"><button @click="openExisting()" class="btn-press px-2.5 h-7 rounded-lg bg-brand text-white text-xs font-semibold flex-shrink-0">Open Chat</button></template>
           </div>
         </template>
-        <div class="flex gap-2 pt-1"><button @click="ui.create=false" class="btn-press flex-1 h-11 rounded-xl bg-white/[.05] hover:bg-white/[.09] border hairline text-sm font-semibold">Cancel</button><button @click="createGroup()" class="btn-press flex-1 h-11 rounded-xl bg-brand hover:bg-brand-600 text-white text-sm font-semibold shadow-glow">Create group</button></div>
+        <div class="flex gap-2 pt-1"><button @click="ui.create=false" :disabled="creating" class="btn-press flex-1 h-11 rounded-xl bg-white/[.05] hover:bg-white/[.09] border hairline text-sm font-semibold disabled:opacity-50">Cancel</button><button @click="createGroup()" :disabled="creating" class="btn-press flex-1 h-11 rounded-xl bg-brand hover:bg-brand-600 text-white text-sm font-semibold shadow-glow disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"><svg x-show="creating" class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M21 12a9 9 0 1 1-6.2-8.5" stroke-linecap="round"/></svg><span x-text="creating?'Creating…':'Create group'"></span></button></div>
       </div>
     </div>
   </div>
@@ -717,7 +717,7 @@ function chatApp(){
     dark:true, sound:false, atBottom:true,
     joinQuery:'', searchQuery:'',
     groups:[], discoverList:[], currentGroup:null, existingSlug:'',
-    form:{name:'',desc:'',vis:'Public'}, formError:'',
+    form:{name:'',desc:'',vis:'Public'}, formError:'', creating:false,
     ui:{sidebar:true,right:true,create:false,join:false,search:false,settings:false,emoji:false,notif:false,confirmDelete:false},
     emojis:['😀','😂','😍','🥰','😎','🤔','😅','😭','👍','🙏','🔥','🎉','❤️','💯','✨','🚀','👀','😴','🤝','👏','💪','🙌','😇','🥳','😜','🤯','🫡','🤩','😤','🧠','⚡','🌟'],
     _typingTimer:null, _typersTimers:{}, _recTimers:{}, _read:new Set(),
@@ -1190,14 +1190,24 @@ function chatApp(){
     },
     isOwner(){ return this.currentGroup && this.currentGroup.owner && this.currentGroup.owner.id===this.me.id; },
     async createGroup(){
+      if(this.creating) return;                 // (6/7) one request per click — ignore re-entrancy
       this.formError=''; this.existingSlug='';
       const name=(this.form.name||'').trim();
       if(name.length<3){ this.formError='Group name must be at least 3 characters.'; return; }
-      const r = await this.api('/api/v1/groups/', {method:'POST', body:JSON.stringify({name, description:this.form.desc||'', visibility:(this.form.vis||'Public').toLowerCase()})});
-      const d = await r.json().catch(()=>({}));
-      if(r.status===201){ location.href='/chat/'+d.data.slug+'/'; return; }
-      if(r.status===409){ this.formError='This group already exists.'; this.existingSlug=d.error?.details?.slug||''; return; }
-      this.formError = d.error?.message || 'Could not create the group.';
+      this.creating=true;
+      try{
+        const r = await this.api('/api/v1/groups/', {method:'POST', body:JSON.stringify({name, description:this.form.desc||'', visibility:(this.form.vis||'Public').toLowerCase()})});
+        const d = await r.json().catch(()=>({}));
+        // (5) Only treat 201 as success — the backend now returns 201 whenever the
+        // group is actually committed, even if the realtime broadcast fails.
+        if(r.status===201){ location.href='/chat/'+d.data.slug+'/'; return; }   // keep button disabled during navigation
+        if(r.status===409){ this.formError='This group already exists.'; this.existingSlug=d.error?.details?.slug||''; }
+        else { this.formError = d.error?.message || 'Could not create the group.'; }
+      }catch(e){
+        this.formError='Network error — please check your connection and try again.';
+      }finally{
+        this.creating=false;
+      }
     },
     openExisting(){ if(this.existingSlug) location.href='/chat/'+this.existingSlug+'/'; },
     async loadDiscover(){

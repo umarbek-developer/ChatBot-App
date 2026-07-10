@@ -8,6 +8,7 @@ messages (timeline, unread, replies, reactions, receipts).
 """
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from asgiref.sync import async_to_sync
@@ -18,6 +19,8 @@ from apps.common.exceptions import ValidationErrorLike
 from apps.common.services import BaseService
 from apps.messaging.models import Message, PlayedReceipt, VoiceMessage
 
+logger = logging.getLogger("apps")
+
 _PALETTE = ["#3B82F6", "#8B5CF6", "#EC4899", "#22C55E", "#F59E0B", "#06B6D4", "#EF4444", "#14B8A6"]
 
 
@@ -26,11 +29,22 @@ def color_for(seed: str) -> str:
 
 
 def broadcast_event(room: str, event: dict[str, Any]) -> None:
-    """Push an event to everyone in a room's channel group (sync-callable)."""
+    """Push an event to everyone in a room's channel group (sync-callable).
+
+    Best-effort: a realtime notification failure (e.g. Redis/channel layer down)
+    must NEVER break the database write or HTTP response that triggered it. Any
+    error is logged and swallowed so the caller's operation still succeeds.
+    """
     layer = get_channel_layer()
     if layer is None:  # pragma: no cover
         return
-    async_to_sync(layer.group_send)(f"chat_{room}", {"type": "fanout", "event": event})
+    try:
+        async_to_sync(layer.group_send)(f"chat_{room}", {"type": "fanout", "event": event})
+    except Exception:
+        logger.exception(
+            "Realtime broadcast failed (room=%s, event=%s); continuing without it",
+            room, event.get("type"),
+        )
 
 
 class VoiceService(BaseService):

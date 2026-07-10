@@ -8,13 +8,17 @@ moderation-sensitive actions. Views call these and never mutate models directly.
 """
 from __future__ import annotations
 
+import logging
 import re
 from datetime import timedelta
 from typing import Any
 
+from django.db import transaction
 from django.db.models import F, Q
 from django.utils import timezone
 from django.utils.text import slugify
+
+logger = logging.getLogger("apps")
 
 from apps.common.exceptions import ConflictError, NotFoundError, PermissionDeniedError, ValidationErrorLike
 from apps.common.models import AuditLog
@@ -56,6 +60,10 @@ class GroupService(BaseService):
     # ---- lifecycle -----------------------------------------------------------
     def create(self, *, owner: Any, name: str, description: str = "", rules: str = "",
                visibility: str = Group.Visibility.PUBLIC, slug: str | None = None) -> Group:
+        owner_id = getattr(owner, "pk", None)
+        logger.info("group.create: requested owner=%s name=%r visibility=%s", owner_id, name, visibility)
+
+        # 1) Validate BEFORE any write.
         name = self._validate_name(name)
         slug = slugify(name)
         if not slug:
@@ -63,30 +71,47 @@ class GroupService(BaseService):
         if visibility not in Group.Visibility.values:
             raise ValidationErrorLike("Invalid visibility.")
 
-        # Reject duplicates (case-insensitive on name OR slug) among ACTIVE groups.
-        # Group.objects excludes soft-deleted rows, so this checks live groups only;
-        # the DB partial UniqueConstraint is the final backstop against races.
+        # 2) Reject duplicates (case-insensitive on name OR slug) among ACTIVE groups.
+        # Group.objects excludes soft-deleted rows; the DB partial UniqueConstraint
+        # is the final backstop against races.
         existing = Group.objects.filter(Q(name__iexact=name) | Q(slug=slug)).first()
         if existing:
+            logger.info("group.create: duplicate rejected name=%r existing_slug=%s", name, existing.slug)
             raise ConflictError(
                 "A group with this name already exists.",
                 details={"slug": existing.slug, "name": existing.name},
             )
 
-        with self.atomic():
-            group = Group.objects.create(
-                name=name, slug=slug, description=description, rules=rules,
-                visibility=visibility, owner=owner, created_by=owner, updated_by=owner,
-            )
-            GroupMember.objects.create(
-                group=group, user=owner, role=GroupMember.Role.OWNER,
-                status=GroupMember.Status.ACTIVE,
-            )
-            self._recount(group)
-            self.audit(actor=owner, action=AuditLog.Action.CREATE, target=group,
-                       metadata={"slug": slug, "visibility": visibility})
-        _broadcast_group_event(slug, "group.created",
-                               {"group": {"slug": slug, "name": name, "visibility": visibility}})
+        # 3) The whole write is atomic — any failure inside rolls everything back,
+        # so there is never a partial group/member/audit record.
+        try:
+            with transaction.atomic():
+                group = Group.objects.create(
+                    name=name, slug=slug, description=description, rules=rules,
+                    visibility=visibility, owner=owner, created_by=owner, updated_by=owner,
+                )
+                logger.info("group.create: row created slug=%s id=%s", slug, group.id)
+                GroupMember.objects.create(
+                    group=group, user=owner, role=GroupMember.Role.OWNER,
+                    status=GroupMember.Status.ACTIVE,
+                )
+                logger.info("group.create: owner membership created slug=%s", slug)
+                self._recount(group)
+                self.audit(actor=owner, action=AuditLog.Action.CREATE, target=group,
+                           metadata={"slug": slug, "visibility": visibility})
+                # 4) Fire the realtime notification ONLY after a successful commit,
+                # via on_commit. It is decoupled from the transaction AND the HTTP
+                # response: if it (or Redis) fails it is logged, never raised — so a
+                # committed group is never reported as a failure to the client.
+                transaction.on_commit(lambda: _broadcast_group_event(
+                    slug, "group.created",
+                    {"group": {"slug": slug, "name": name, "visibility": visibility}},
+                ))
+        except Exception:
+            logger.exception("group.create: FAILED during transaction name=%r (rolled back)", name)
+            raise
+
+        logger.info("group.create: committed OK slug=%s owner=%s", slug, owner_id)
         return group
 
     def update(self, *, actor: Any, group: Group, **fields) -> Group:
