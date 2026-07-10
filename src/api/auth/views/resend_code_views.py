@@ -1,19 +1,35 @@
+import logging
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from apps.users.models import User, UserOTPVerifications, ChangeEmailLogs
+from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
-from api.auth.send_mail_sms import send_otp_email
-# from api.auth.tasks import send_otp_email_task # celery bilan yuborish kerak bo'lsa
+from api.auth.send_mail_sms import deliver_otp
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.throttling import ScopedRateThrottle
 
-    
+logger = logging.getLogger("api")
+
+
+def _email_failure(email, exc):
+    """Log the full traceback and return a 502 with the real cause in DEBUG."""
+    logger.exception("OTP resend email delivery FAILED for %s", email)
+    detail = str(exc) if settings.DEBUG else "We couldn't resend the code right now. Please try again."
+    return Response({"error": "Email delivery failed", "detail": detail,
+                     "type": type(exc).__name__ if settings.DEBUG else None},
+                    status=status.HTTP_502_BAD_GATEWAY)
+
+
 class ResendVerificationsOTPView(APIView):
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "otp_resend"
 
     def send_otp_code(self, otp_data):
         code = otp_data.generate_code()
-        send_otp_email(otp_data.user.email, code, "otp")
+        return deliver_otp(otp_data.user.email, code, "otp")
 
     def post(self, request, otp_type):
         email = request.data.get("email")
@@ -34,11 +50,10 @@ class ResendVerificationsOTPView(APIView):
                 "error": "error from sending resend code"
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        if otp_data.is_code_expired():
-            return Response({
-                "error": f"you can resend mail code after: {otp_data.expired_at}"
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
+        # NOTE: resend is intentionally allowed while the current code is still
+        # valid (the user may not have received it). Abuse is bounded by
+        # resend_attapts (max 3 -> 1-day block), error_expired_at, the DRF
+        # throttle (5/hour) and the client-side cooldown timer.
         if otp_data.resend_attapts >= 3:
             otp_data.error_expired_at = now + timedelta(days=1)
             otp_data.resend_attapts = 0
@@ -58,8 +73,12 @@ class ResendVerificationsOTPView(APIView):
                 "error": "error from sending resend code"
             }, status=status.HTTP_400_BAD_REQUEST)
         
+        try:
+            self.send_otp_code(otp_data)
+        except Exception as exc:
+            return _email_failure(email, exc)
         otp_data.resend_attapts += 1
-        self.send_otp_code(otp_data)
+        otp_data.save()
 
         return Response({
             "message": "Verifications code sent to your email"
@@ -71,7 +90,7 @@ class ResendVerificationsOTPForChangeEmailView(APIView):
 
     def send_otp_code(self, otp_data):
         code = otp_data.generate_code()
-        send_otp_email(otp_data.user.email, code, "otp")
+        return deliver_otp(otp_data.user.email, code, "otp")
 
     def post(self, request, otp_type):
         if otp_type not in ("otp", "link"):
@@ -110,7 +129,10 @@ class ResendVerificationsOTPForChangeEmailView(APIView):
             change_email_obj.resend_attapts += 1
             change_email_obj.attapts = 0
             change_email_obj.save()
-            self.send_otp_code(change_email_obj)
+            try:
+                self.send_otp_code(change_email_obj)
+            except Exception as exc:
+                return _email_failure(change_email_obj.user.email, exc)
 
             return Response({
                 "message": "Verifications code sent to your email"

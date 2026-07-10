@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Account · Pulse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config={darkMode:'class',theme:{extend:{
+      colors:{ink:'#0F172A',panel:'#111827',card:'#1E293B',brand:{DEFAULT:'#3B82F6',600:'#2563EB',400:'#60A5FA'},ok:'#22C55E',warn:'#F59E0B',danger:'#EF4444',ink2:'#94A3B8'},
+      fontFamily:{sans:['Inter','system-ui','sans-serif']},
+      boxShadow:{glow:'0 0 0 1px rgba(59,130,246,.35),0 8px 30px -8px rgba(59,130,246,.45)',soft:'0 20px 60px -20px rgba(0,0,0,.6)'}}}}
+  </script>
+  <style>
+    *{-webkit-font-smoothing:antialiased} body{background:#0F172A;font-family:'Inter',sans-serif} [x-cloak]{display:none!important}
+    .glass{background:rgba(30,41,59,.55);backdrop-filter:blur(16px) saturate(140%)} .hairline{border-color:rgba(148,163,184,.12)}
+    .field{transition:border-color .15s,box-shadow .15s} .field:focus-within{border-color:#3B82F6;box-shadow:0 0 0 4px rgba(59,130,246,.12)}
+    .btn-press{transition:transform .08s}.btn-press:active{transform:scale(.97)}
+    .scroll::-webkit-scrollbar{width:8px}.scroll::-webkit-scrollbar-thumb{background:#293548;border-radius:99px}
+    @keyframes floatIn{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:none}} .in{animation:floatIn .5s cubic-bezier(.2,.8,.2,1) both}
+    .spin{animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen">
+<div x-data="accountApp()" x-init="init()" x-cloak class="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+
+  <!-- top bar -->
+  <div class="flex items-center gap-3 mb-6">
+    <a href="/chat/" class="btn-press grid place-items-center w-10 h-10 rounded-xl bg-white/[.04] border hairline hover:bg-white/[.08]" title="Back to chat">
+      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    </a>
+    <h1 class="text-xl font-extrabold tracking-tight">Account</h1>
+    <button @click="logout()" class="ml-auto btn-press px-4 h-10 rounded-xl bg-white/[.05] border hairline hover:bg-danger/10 hover:text-danger text-sm font-semibold">Log out</button>
+  </div>
+
+  <div x-show="loading" class="grid place-items-center py-32"><svg class="w-8 h-8 spin text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M21 12a9 9 0 1 1-6.2-8.5" stroke-linecap="round"/></svg></div>
+
+  <div x-show="!loading" class="in grid lg:grid-cols-3 gap-6">
+    <!-- LEFT: identity card -->
+    <div class="lg:col-span-1 space-y-6">
+      <div class="glass border hairline rounded-3xl overflow-hidden shadow-soft">
+        <div class="h-24 bg-gradient-to-br from-brand/40 to-indigo-500/30"></div>
+        <div class="px-6 pb-6 -mt-12 text-center">
+          <div class="relative inline-block">
+            <template x-if="me.profile?.avatar"><img :src="me.profile.avatar" class="w-24 h-24 rounded-2xl object-cover border-4 border-panel shadow-glow"/></template>
+            <template x-if="!me.profile?.avatar"><div class="w-24 h-24 rounded-2xl grid place-items-center text-3xl font-extrabold text-white border-4 border-panel shadow-glow" :style="'background:'+color" x-text="initials(displayName())"></div></template>
+            <button @click="$refs.avatar.click()" class="btn-press absolute -bottom-1 -right-1 w-8 h-8 grid place-items-center rounded-full bg-brand text-white shadow-lg" title="Change avatar">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </button>
+            <input x-ref="avatar" type="file" accept="image/*" class="hidden" @change="uploadAvatar($event)"/>
+          </div>
+          <h2 class="mt-3 text-lg font-bold" x-text="displayName()"></h2>
+          <p class="text-sm text-ink2" x-text="me.profile?.username ? '@'+me.profile.username : me.email"></p>
+          <div class="mt-3 inline-flex items-center gap-1.5 px-2.5 h-7 rounded-full bg-ok/10 text-ok text-xs font-medium">
+            <span class="w-1.5 h-1.5 rounded-full bg-ok"></span> Online
+          </div>
+          <div x-show="avatarPct>0" class="mt-3 h-1 rounded-full bg-white/10 overflow-hidden"><div class="h-full bg-brand transition-all" :style="'width:'+avatarPct+'%'"></div></div>
+        </div>
+      </div>
+
+      <!-- Security / sessions -->
+      <div class="glass border hairline rounded-3xl p-5 shadow-soft">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-bold text-sm">Active sessions</h3>
+          <button @click="logoutAll()" class="text-xs text-danger hover:underline font-semibold">Log out all</button>
+        </div>
+        <div class="space-y-2 max-h-64 overflow-y-auto scroll">
+          <template x-for="s in sessions" :key="s.id">
+            <div class="flex items-center gap-3 p-2.5 rounded-xl bg-white/[.03] border hairline">
+              <div class="grid place-items-center w-9 h-9 rounded-lg bg-white/[.05] text-ink2"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
+              <div class="min-w-0 flex-1"><p class="text-[13px] font-medium truncate" x-text="s.device_name"></p><p class="text-[11px] text-ink2 truncate" x-text="(s.ip_address||'unknown IP')+' · '+fmt(s.created_at)"></p></div>
+              <template x-if="s.is_current"><span class="text-[10px] px-1.5 py-0.5 rounded bg-ok/15 text-ok font-semibold">This device</span></template>
+            </div>
+          </template>
+          <template x-if="!sessions.length"><p class="py-6 text-center text-xs text-ink2">No other active sessions.</p></template>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: editable fields -->
+    <div class="lg:col-span-2 space-y-6">
+      <div class="glass border hairline rounded-3xl p-6 shadow-soft">
+        <h3 class="font-bold mb-4">Profile</h3>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div><label class="text-xs font-medium text-ink2">First name</label><div class="field mt-1.5 h-11 px-3.5 rounded-xl bg-white/[.04] border hairline flex items-center"><input x-model="form.first_name" class="w-full bg-transparent outline-none text-sm"/></div></div>
+          <div><label class="text-xs font-medium text-ink2">Last name</label><div class="field mt-1.5 h-11 px-3.5 rounded-xl bg-white/[.04] border hairline flex items-center"><input x-model="form.last_name" class="w-full bg-transparent outline-none text-sm"/></div></div>
+          <div><label class="text-xs font-medium text-ink2">Display name</label><div class="field mt-1.5 h-11 px-3.5 rounded-xl bg-white/[.04] border hairline flex items-center"><input x-model="form.display_name" placeholder="How your name appears" class="w-full bg-transparent outline-none text-sm"/></div></div>
+          <div><label class="text-xs font-medium text-ink2">Username</label><div class="field mt-1.5 h-11 px-3.5 rounded-xl bg-white/[.04] border hairline flex items-center gap-1"><span class="text-ink2 text-sm">@</span><input x-model="form.username" placeholder="unique_handle" class="w-full bg-transparent outline-none text-sm"/></div></div>
+          <div><label class="text-xs font-medium text-ink2">Phone number</label><div class="field mt-1.5 h-11 px-3.5 rounded-xl bg-white/[.04] border hairline flex items-center"><input x-model="form.phone_number" placeholder="+998..." class="w-full bg-transparent outline-none text-sm"/></div></div>
+          <div><label class="text-xs font-medium text-ink2">Email</label><div class="mt-1.5 h-11 px-3.5 rounded-xl bg-white/[.02] border hairline flex items-center opacity-70"><input :value="me.email" disabled class="w-full bg-transparent outline-none text-sm cursor-not-allowed"/></div></div>
+        </div>
+        <div class="mt-4"><label class="text-xs font-medium text-ink2">Bio</label><textarea x-model="form.bio" rows="3" maxlength="500" placeholder="Tell people about yourself…" class="field mt-1.5 w-full p-3.5 rounded-xl bg-white/[.04] border hairline outline-none text-sm scroll"></textarea></div>
+        <p x-show="error" x-text="error" class="text-sm text-danger mt-3"></p>
+        <div class="flex justify-end mt-5">
+          <button @click="save()" :disabled="saving" class="btn-press px-6 h-11 rounded-xl bg-brand hover:bg-brand-600 text-white font-semibold shadow-glow disabled:opacity-60 flex items-center gap-2">
+            <svg x-show="saving" class="w-4 h-4 spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M21 12a9 9 0 1 1-6.2-8.5" stroke-linecap="round"/></svg>
+            <span x-text="saving?'Saving…':'Save changes'"></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="glass border hairline rounded-3xl p-6 shadow-soft">
+        <h3 class="font-bold mb-1">Security</h3>
+        <p class="text-sm text-ink2 mb-4">Manage your password and account access.</p>
+        <div class="flex flex-wrap gap-3">
+          <a href="/forgot-password/" class="btn-press px-4 h-11 grid place-items-center rounded-xl bg-white/[.05] border hairline hover:bg-white/[.09] text-sm font-semibold">Reset password</a>
+          <button @click="logoutAll()" class="btn-press px-4 h-11 rounded-xl bg-danger/10 text-danger hover:bg-danger/20 text-sm font-semibold">Log out all devices</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div x-show="toast" x-transition class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl glass border hairline shadow-soft text-sm font-medium" x-text="toast"></div>
+</div>
+
+<script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<script>
+function accountApp(){ return {
+  loading:true, saving:false, error:'', toast:'', avatarPct:0, color:'#3B82F6',
+  me:{profile:{}}, sessions:[],
+  form:{first_name:'',last_name:'',display_name:'',username:'',phone_number:'',bio:''},
+
+  async init(){
+    if(!localStorage.getItem('pulse.access')){ return this.goLogin(); }
+    const me = await this.getJSON('/api/v1/accounts/me/');
+    if(!me){ return this.goLogin(); }
+    this.me = me.data;
+    this.color = this.colorFor(this.me.id);
+    const p = this.me.profile||{};
+    this.form = { first_name:this.me.first_name||'', last_name:this.me.last_name||'',
+      display_name:p.display_name||'', username:p.username||'', phone_number:this.me.phone_number||'', bio:p.bio||'' };
+    this.loading=false;
+    const s = await this.getJSON('/api/v1/accounts/sessions/'); if(s) this.sessions=s.data;
+  },
+
+  goLogin(){ location.href='/login/?next='+encodeURIComponent('/account/'); },
+  token(){ return localStorage.getItem('pulse.access')||''; },
+  async authFetch(path, opts={}){
+    opts.headers = Object.assign({}, opts.headers, {Authorization:'Bearer '+this.token()});
+    let r = await fetch(path, opts);
+    if(r.status===401 && await this.refresh()){ opts.headers.Authorization='Bearer '+this.token(); r = await fetch(path, opts); }
+    return r;
+  },
+  async refresh(){
+    const rt = localStorage.getItem('pulse.refresh'); if(!rt) return false;
+    const r = await fetch('/api/v1/auth/token/refresh/', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refresh:rt})});
+    if(!r.ok) return false; const d = await r.json(); if(!d.access) return false;
+    localStorage.setItem('pulse.access', d.access); return true;
+  },
+  async getJSON(path){ const r = await this.authFetch(path); if(!r.ok) return null; return r.json(); },
+
+  async save(){
+    this.saving=true; this.error='';
+    const r = await this.authFetch('/api/v1/accounts/me/', {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(this.form)});
+    this.saving=false;
+    const d = await r.json().catch(()=>({}));
+    if(r.ok){ this.me = d.data; this.showToast('Profile saved ✓'); }
+    else { this.error = (d.error&&d.error.message) || 'Could not save changes.'; }
+  },
+  async uploadAvatar(e){
+    const f = e.target.files[0]; e.target.value=''; if(!f) return;
+    if(f.size>5*1024*1024){ this.showToast('Image too large (max 5MB)'); return; }
+    const fd = new FormData(); fd.append('avatar', f);
+    const xhr = new XMLHttpRequest(); xhr.open('POST','/api/v1/accounts/me/avatar/');
+    xhr.setRequestHeader('Authorization','Bearer '+this.token());
+    xhr.upload.onprogress=(ev)=>{ if(ev.lengthComputable) this.avatarPct=Math.round(ev.loaded/ev.total*100); };
+    xhr.onload=()=>{ this.avatarPct=0; if(xhr.status<400){ try{ this.me=JSON.parse(xhr.responseText).data; }catch(_){}; this.showToast('Avatar updated ✓'); } else this.showToast('Upload failed'); };
+    xhr.onerror=()=>{ this.avatarPct=0; this.showToast('Upload failed'); };
+    xhr.send(fd);
+  },
+  async logout(){
+    const rt = localStorage.getItem('pulse.refresh');
+    await this.authFetch('/api/v1/accounts/logout/', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refresh:rt})}).catch(()=>{});
+    this.clearAndLogin();
+  },
+  async logoutAll(){
+    await this.authFetch('/api/v1/accounts/logout-all/', {method:'POST'}).catch(()=>{});
+    this.clearAndLogin();
+  },
+  clearAndLogin(){ localStorage.removeItem('pulse.access'); localStorage.removeItem('pulse.refresh'); location.href='/login/'; },
+
+  displayName(){ return (this.form.display_name || (this.me.full_name||'').trim() || this.me.email || 'You'); },
+  initials(n){ if(!n) return '?'; return n.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase(); },
+  colorFor(seed){ const p=['#3B82F6','#8B5CF6','#EC4899','#22C55E','#F59E0B','#06B6D4','#EF4444','#14B8A6']; let s=0; for(const c of String(seed)) s+=c.charCodeAt(0); return p[s%p.length]; },
+  fmt(d){ try{ return new Date(d).toLocaleDateString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } },
+  showToast(t){ this.toast=t; clearTimeout(this._t); this._t=setTimeout(()=>this.toast='',2000); },
+}}
+</script>
+</body>
+</html>

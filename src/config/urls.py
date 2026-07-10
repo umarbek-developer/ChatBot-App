@@ -11,6 +11,14 @@ urlpatterns = [
     )),
     path('api/v1/', include('api.urls')),
     path('admin/', admin.site.urls),
+
+    # Auth pages (premium UI wired to the existing DRF auth API)
+    path('login/', TemplateView.as_view(template_name='auth/login.html'), name='login'),
+    path('register/', TemplateView.as_view(template_name='auth/register.html'), name='register'),
+    path('forgot-password/', TemplateView.as_view(template_name='auth/forgot.html'), name='forgot-password'),
+    path('verify/', TemplateView.as_view(template_name='auth/verify.html'), name='verify-email'),
+    path('account/', TemplateView.as_view(template_name='account/profile.html'), name='account'),
+
     path('chat/', index, name="chat-app"),
     path('chat/<str:room_name>/', room, name="room-app"),
 ]

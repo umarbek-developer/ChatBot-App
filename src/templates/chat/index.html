@@ -1,27 +1,123 @@
-<!-- chat/templates/chat/index.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en" class="dark">
 <head>
     <meta charset="utf-8"/>
-    <title>Chat Rooms</title>
-</head>
-<body>
-    What chat room would you like to enter?<br>
-    <input id="room-name-input" type="text" size="100"><br>
-    <input id="room-name-submit" type="button" value="Enter">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Pulse · Realtime messaging</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        document.querySelector('#room-name-input').focus();
-        document.querySelector('#room-name-input').onkeyup = function(e) {
-            if (e.key === 'Enter') {  // enter, return
-                document.querySelector('#room-name-submit').click();
-            }
-        };
-
-        document.querySelector('#room-name-submit').onclick = function(e) {
-            var roomName = document.querySelector('#room-name-input').value;
-            window.location.pathname = '/chat/' + roomName + '/';
-        };
+      tailwind.config={darkMode:'class',theme:{extend:{
+        colors:{ink:'#0F172A',panel:'#111827',card:'#1E293B',brand:{DEFAULT:'#3B82F6',600:'#2563EB',400:'#60A5FA'},ok:'#22C55E',ink2:'#94A3B8'},
+        fontFamily:{sans:['Inter','system-ui','sans-serif']},
+        boxShadow:{glow:'0 0 0 1px rgba(59,130,246,.35), 0 8px 30px -8px rgba(59,130,246,.45)',soft:'0 20px 60px -20px rgba(0,0,0,.6)'}}}}
     </script>
+    <style>
+      *{-webkit-font-smoothing:antialiased}
+      body{background:#0F172A;font-family:'Inter',sans-serif}
+      [x-cloak]{display:none!important}
+      .aurora::before{content:'';position:fixed;inset:0;pointer-events:none;
+        background:radial-gradient(700px 500px at 15% 0%,rgba(59,130,246,.20),transparent 60%),radial-gradient(700px 500px at 100% 100%,rgba(139,92,246,.16),transparent 55%)}
+      .grid-bg{background-image:linear-gradient(rgba(148,163,184,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.05) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(ellipse at center,#000,transparent 75%)}
+      .glass{background:rgba(30,41,59,.55);backdrop-filter:blur(16px) saturate(140%)}
+      .hairline{border-color:rgba(148,163,184,.12)}
+      @keyframes floatIn{0%{opacity:0;transform:translateY(16px) scale(.98)}100%{opacity:1;transform:none}}
+      .in{animation:floatIn .6s cubic-bezier(.2,.8,.2,1) both}
+      @keyframes rise{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+      .float{animation:rise 5s ease-in-out infinite}
+      .btn-press{transition:transform .08s}.btn-press:active{transform:scale(.96)}
+    </style>
+</head>
+<body class="text-slate-100 aurora min-h-screen overflow-x-hidden">
+  <div class="fixed inset-0 grid-bg"></div>
+
+  <div x-data="lobby()" x-cloak class="relative z-10 min-h-screen flex flex-col">
+    <!-- Nav -->
+    <nav class="h-16 flex items-center gap-3 px-6 max-w-6xl mx-auto w-full">
+      <div class="grid place-items-center w-9 h-9 rounded-xl bg-gradient-to-br from-brand to-indigo-500 shadow-glow">
+        <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <p class="font-extrabold text-lg tracking-tight">Pulse</p>
+      <div class="ml-auto flex items-center gap-2 text-sm">
+        <a href="/admin/" class="px-3 h-9 grid place-items-center rounded-lg text-ink2 hover:text-slate-100 hover:bg-white/5">Admin</a>
+        <a href="/api/v1/" class="px-3 h-9 grid place-items-center rounded-lg text-ink2 hover:text-slate-100 hover:bg-white/5">API</a>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <main class="flex-1 grid lg:grid-cols-2 gap-10 items-center max-w-6xl mx-auto w-full px-6 py-10">
+      <div class="in">
+        <div class="inline-flex items-center gap-2 px-3 h-7 rounded-full bg-white/[.05] border hairline text-xs text-ink2 mb-6">
+          <span class="w-1.5 h-1.5 rounded-full bg-ok"></span> Live · WebSocket powered
+        </div>
+        <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight leading-[1.05]">
+          Conversations that feel <span class="bg-gradient-to-r from-brand-400 to-indigo-400 bg-clip-text text-transparent">instant.</span>
+        </h1>
+        <p class="mt-4 text-ink2 text-lg max-w-md">A realtime messaging workspace with live typing, reactions and presence — built on Django Channels. Create a room and share the link.</p>
+
+        <div class="mt-8 p-2 rounded-2xl glass border hairline max-w-md shadow-soft">
+          <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-1 px-3 h-12 rounded-xl bg-white/[.04] border hairline">
+              <span class="text-ink2 font-semibold">#</span>
+              <input x-ref="room" x-model="room" @keydown.enter="go()" placeholder="enter-room-name" class="flex-1 bg-transparent outline-none text-[15px] placeholder:text-ink2/60"/>
+            </div>
+            <button @click="go()" class="btn-press px-5 h-12 rounded-xl bg-brand hover:bg-brand-600 text-white font-semibold shadow-glow flex items-center gap-2">
+              Enter <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+          <p x-show="error" x-text="error" class="text-xs text-red-400 px-3 pt-2"></p>
+        </div>
+
+        <div class="mt-5 flex items-center gap-2 flex-wrap">
+          <span class="text-xs text-ink2">Popular:</span>
+          <template x-for="r in ['general','design','engineering','random']" :key="r">
+            <a :href="'/chat/'+r+'/'" class="btn-press px-2.5 h-7 grid place-items-center rounded-lg bg-white/[.04] border hairline text-xs text-slate-300 hover:text-white hover:bg-white/[.08]">#<span x-text="r"></span></a>
+          </template>
+        </div>
+      </div>
+
+      <!-- Preview card -->
+      <div class="in float hidden lg:block" style="animation-delay:.1s">
+        <div class="rounded-3xl glass border hairline shadow-soft overflow-hidden">
+          <div class="h-12 flex items-center gap-2 px-4 border-b hairline">
+            <span class="w-3 h-3 rounded-full bg-red-400/80"></span><span class="w-3 h-3 rounded-full bg-yellow-400/80"></span><span class="w-3 h-3 rounded-full bg-green-400/80"></span>
+            <span class="ml-2 text-xs text-ink2">#design</span>
+          </div>
+          <div class="p-5 space-y-4">
+            <div class="flex gap-3">
+              <div class="w-9 h-9 rounded-full grid place-items-center text-xs font-bold text-white" style="background:#EC4899">MA</div>
+              <div><div class="flex items-center gap-2"><span class="text-[13px] font-semibold" style="color:#EC4899">Maya</span><span class="text-[11px] text-ink2">09:41</span></div>
+                <div class="mt-1 px-3.5 py-2 rounded-2xl rounded-tl-md bg-card border hairline text-sm max-w-[240px]">Pushed the new onboarding flow ✨ can you review?</div></div>
+            </div>
+            <div class="flex gap-3 flex-row-reverse">
+              <div class="w-9 h-9 rounded-full grid place-items-center text-xs font-bold text-white" style="background:#3B82F6">YO</div>
+              <div class="flex flex-col items-end"><div class="flex items-center gap-2"><span class="text-[13px] font-semibold">You</span><span class="text-[11px] text-ink2">09:42</span></div>
+                <div class="mt-1 px-3.5 py-2 rounded-2xl rounded-tr-md bg-brand text-white text-sm max-w-[240px]">On it — looks 🔥</div>
+                <div class="flex gap-1 mt-1"><span class="flex items-center gap-1 px-1.5 h-6 rounded-full bg-white/[.06] border hairline text-xs">🔥 <span class="text-ink2">2</span></span></div></div>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-ink2 pl-1">
+              <span class="flex items-center gap-0.5"><span class="w-1.5 h-1.5 rounded-full bg-ink2 animate-bounce"></span><span class="w-1.5 h-1.5 rounded-full bg-ink2 animate-bounce" style="animation-delay:.15s"></span><span class="w-1.5 h-1.5 rounded-full bg-ink2 animate-bounce" style="animation-delay:.3s"></span></span>
+              Maya is typing
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="py-6 text-center text-xs text-ink2/70">Built with Django Channels · Tailwind · Alpine.js</footer>
+  </div>
+
+  <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <script>
+    function lobby(){ return {
+      room:'', error:'',
+      init(){ this.$nextTick(()=>this.$refs.room?.focus()); },
+      go(){ const n=this.room.trim().toLowerCase().replace(/\s+/g,'-');
+        if(n.length<2){ this.error='Room name must be at least 2 characters.'; return; }
+        if(!/^[a-z0-9-]+$/.test(n)){ this.error='Use letters, numbers and dashes only.'; return; }
+        location.href='/chat/'+n+'/'; } }; }
+  </script>
 </body>
 </html>

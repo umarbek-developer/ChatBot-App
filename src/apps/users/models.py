@@ -1,6 +1,7 @@
 import uuid
 import random
 from django.db import models
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import timedelta
@@ -97,9 +98,9 @@ class UserOTPVerifications(models.Model):
         return f"{self.user} | {self.code}"
         
     def generate_code(self):
-        otp = random.randint(100000, 999999)
+        otp = str(random.randint(100000, 999999))
         now = timezone.now()
-        next_time = now + timedelta(minutes=3)
+        next_time = now + timedelta(minutes=getattr(settings, "OTP_TTL_MINUTES", 10))
         self.expired_at = next_time
         self.code = otp
         self.save()
@@ -173,9 +174,9 @@ class ChangeEmailLogs(models.Model):
         return False
 
     def generate_code(self):
-        otp = random.randint(100000, 999999)
+        otp = str(random.randint(100000, 999999))
         now = timezone.now()
-        next_time = now + timedelta(minutes=3)
+        next_time = now + timedelta(minutes=getattr(settings, "OTP_TTL_MINUTES", 10))
         self.expired_at = next_time
         self.code = otp
         self.save()

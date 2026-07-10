@@ -1,55 +1,63 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <style>
-        .container {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 500px;
-            margin: 0 auto;
-            padding: 20px;
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-        }
-        .header {
-            text-align: center;
-            color: #333;
-        }
-        .code-box {
-            background-color: #f4f4f4;
-            padding: 15px;
-            text-align: center;
-            font-size: 28px;
-            font-weight: bold;
-            letter-spacing: 5px;
-            color: #2c3e50;
-            border-radius: 5px;
-            margin: 20px 0;
-        }
-        .footer {
-            font-size: 12px;
-            color: #888;
-            text-align: center;
-            margin-top: 20px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>Verify your email</title>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h2>Tasdiqlash kodi</h2>
-            <p>Ro'yxatdan o'tishni yakunlash uchun quyidagi koddan foydalaning:</p>
-        </div>
-        
-        <div class="code-box">
-            {{ code }}
-        </div>
-        
-        <p>Ushbu kod 10 daqiqa davomida amal qiladi. Agar siz so'rov yubormagan bo'lsangiz, ushbu xabarga e'tibor bermang.</p>
-        
-        <div class="footer">
-            © 2026 Maxfiy Platforma. Barcha huquqlar himoyalangan.
-        </div>
-    </div>
+<body style="margin:0;padding:0;background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <!-- preheader (hidden preview text) -->
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Your Pulse verification code is {{ code }}. It expires in {{ minutes }} minutes.</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0f172a;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#111827;border:1px solid #243149;border-radius:20px;overflow:hidden;">
+          <!-- header -->
+          <tr>
+            <td style="padding:32px 32px 8px;text-align:center;">
+              <table role="presentation" cellpadding="0" cellspacing="0" align="center"><tr>
+                <td style="width:44px;height:44px;background:#3B82F6;border-radius:12px;text-align:center;vertical-align:middle;font-size:22px;">💬</td>
+                <td style="padding-left:12px;font-size:20px;font-weight:800;color:#f8fafc;letter-spacing:-.3px;">Pulse</td>
+              </tr></table>
+            </td>
+          </tr>
+          <!-- body -->
+          <tr>
+            <td style="padding:16px 32px 8px;text-align:center;">
+              <h1 style="margin:12px 0 6px;font-size:22px;font-weight:800;color:#f8fafc;">Verify your email</h1>
+              <p style="margin:0;font-size:14px;line-height:22px;color:#94a3b8;">Enter this code in the app to finish creating your account.</p>
+            </td>
+          </tr>
+          <!-- code -->
+          <tr>
+            <td style="padding:24px 32px 8px;">
+              <div style="background:#0f172a;border:1px solid #243149;border-radius:14px;padding:20px;text-align:center;">
+                <div style="font-size:34px;font-weight:800;letter-spacing:12px;color:#60a5fa;font-family:'SFMono-Regular',Consolas,monospace;">{{ code }}</div>
+              </div>
+              <p style="margin:14px 0 0;text-align:center;font-size:13px;color:#94a3b8;">This code expires in <strong style="color:#f8fafc;">{{ minutes }} minutes</strong>.</p>
+            </td>
+          </tr>
+          <!-- security note -->
+          <tr>
+            <td style="padding:20px 32px 8px;">
+              <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:12px;padding:12px 14px;">
+                <p style="margin:0;font-size:12px;line-height:18px;color:#fcd9a2;">🔒 If you didn't request this, you can safely ignore this email — your account stays secure. Never share this code with anyone; Pulse staff will never ask for it.</p>
+              </div>
+            </td>
+          </tr>
+          <!-- footer -->
+          <tr>
+            <td style="padding:20px 32px 32px;text-align:center;border-top:1px solid #243149;">
+              <p style="margin:0 0 4px;font-size:12px;color:#64748b;">Need help? Contact <a href="mailto:{{ support_email }}" style="color:#60a5fa;text-decoration:none;">{{ support_email }}</a></p>
+              <p style="margin:0;font-size:11px;color:#475569;">© 2026 Pulse · Realtime messaging</p>
+            </td>
+          </tr>
+        </table>
+        <p style="max-width:480px;margin:16px auto 0;font-size:11px;color:#475569;text-align:center;">You received this email because someone signed up for Pulse with this address.</p>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>

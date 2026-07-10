@@ -1,0 +1,64 @@
+{% extends "auth/base.html" %}
+{% block title %}Verify email · Pulse{% endblock %}
+{% block topright %}<a href="/login/" class="text-brand-400 font-semibold hover:underline">Back to sign in</a>{% endblock %}
+
+{% block card %}
+<div x-data="verifyForm()" x-init="init()">
+  <div class="grid place-items-center w-14 h-14 rounded-2xl bg-brand/15 text-brand-400 mb-5">
+    <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+  </div>
+  <h1 class="text-2xl font-extrabold tracking-tight">Verify your email</h1>
+  <p class="text-ink2 mt-1 text-sm">We sent a 6-digit code to <span class="text-slate-200 font-medium" x-text="email||'your inbox'"></span>. Enter it below.</p>
+
+  <div class="flex gap-2.5 mt-7" @paste="onPaste($event)">
+    <template x-for="(d,i) in digits" :key="i">
+      <input :id="'otp'+i" x-model="digits[i]" @input="onInput(i,$event)" @keydown="onKey(i,$event)"
+        inputmode="numeric" maxlength="1"
+        class="field w-full h-14 text-center text-xl font-bold rounded-xl bg-white/[.04] border hairline outline-none"/>
+    </template>
+  </div>
+
+  <p x-show="error" x-text="error" class="text-sm text-danger mt-4"></p>
+
+  <button @click="submit()" :disabled="loading || code().length<6" class="btn-press w-full h-12 mt-6 rounded-xl bg-brand hover:bg-brand-600 text-white font-semibold shadow-glow disabled:opacity-50 flex items-center justify-center gap-2">
+    <svg x-show="loading" class="w-4 h-4 spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M21 12a9 9 0 1 1-6.2-8.5" stroke-linecap="round"/></svg>
+    <span x-text="loading?'Verifying…':'Verify email'"></span>
+  </button>
+
+  <p class="text-center text-sm text-ink2 mt-6">
+    Didn't get it?
+    <button @click="resend()" :disabled="cooldown>0" class="text-brand-400 font-semibold hover:underline disabled:opacity-50 disabled:no-underline">
+      <span x-show="cooldown===0">Resend code</span>
+      <span x-show="cooldown>0">Resend in <span x-text="cooldown"></span>s</span>
+    </button>
+  </p>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+function verifyForm(){ return {
+  email:'', digits:['','','','','',''], loading:false, error:'', cooldown:0,
+  init(){ this.email = new URLSearchParams(location.search).get('email')||''; this.$nextTick(()=>document.getElementById('otp0')?.focus()); },
+  code(){ return this.digits.join(''); },
+  onInput(i,e){ const v=e.target.value.replace(/\D/g,''); this.digits[i]=v.slice(-1)||''; if(this.digits[i] && i<5) document.getElementById('otp'+(i+1)).focus(); if(this.code().length===6) this.submit(); },
+  onKey(i,e){ if(e.key==='Backspace' && !this.digits[i] && i>0){ document.getElementById('otp'+(i-1)).focus(); } },
+  onPaste(e){ const t=(e.clipboardData.getData('text')||'').replace(/\D/g,'').slice(0,6); if(!t) return; e.preventDefault(); for(let i=0;i<6;i++) this.digits[i]=t[i]||''; document.getElementById('otp'+Math.min(t.length,5)).focus(); if(t.length===6) this.submit(); },
+  async submit(){
+    if(this.code().length<6 || this.loading) return;
+    this.loading=true; this.error='';
+    const {ok,status,data} = await Pulse.post('/auth/register/otp/verify/', {email:this.email, code:this.code()});
+    this.loading=false;
+    // This endpoint returns 200 on success (message uses the "error" key by legacy convention)
+    if(ok || status===200){ Pulse.toast('Email verified 🎉'); setTimeout(()=>location.href='/login/', 700); }
+    else { this.error = Pulse.msg(data,'Invalid or expired code.'); this.digits=['','','','','','']; document.getElementById('otp0').focus(); }
+  },
+  async resend(){
+    if(this.cooldown>0) return;
+    const {ok,data} = await Pulse.post('/auth/resend/otp/', {email:this.email});
+    Pulse.toast(ok ? 'A new code is on the way ✉️' : Pulse.msg(data,'Could not resend right now.'));
+    this.cooldown=30; const t=setInterval(()=>{ this.cooldown--; if(this.cooldown<=0) clearInterval(t); },1000);
+  }
+}}
+</script>
+{% endblock %}

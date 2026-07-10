@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Pulse{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config={darkMode:'class',theme:{extend:{
+      colors:{ink:'#0F172A',panel:'#111827',card:'#1E293B',hair:'#243149',
+        brand:{DEFAULT:'#3B82F6',600:'#2563EB',400:'#60A5FA'},ok:'#22C55E',warn:'#F59E0B',danger:'#EF4444',ink2:'#94A3B8'},
+      fontFamily:{sans:['Inter','system-ui','sans-serif']},
+      boxShadow:{glow:'0 0 0 1px rgba(59,130,246,.35),0 8px 30px -8px rgba(59,130,246,.45)',soft:'0 20px 60px -20px rgba(0,0,0,.6)'}}}}
+  </script>
+  <style>
+    *{-webkit-font-smoothing:antialiased}
+    html,body{height:100%}
+    body{background:#0F172A;font-family:'Inter',sans-serif}
+    [x-cloak]{display:none!important}
+    .glass{background:rgba(30,41,59,.55);backdrop-filter:blur(16px) saturate(140%)}
+    .hairline{border-color:rgba(148,163,184,.12)}
+    .grid-bg{background-image:linear-gradient(rgba(148,163,184,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.05) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(ellipse at center,#000,transparent 78%)}
+    @keyframes floatIn{0%{opacity:0;transform:translateY(16px) scale(.985)}100%{opacity:1;transform:none}}
+    .in{animation:floatIn .55s cubic-bezier(.2,.8,.2,1) both}
+    @keyframes rise{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+    .float{animation:rise 6s ease-in-out infinite}
+    @keyframes blob{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(20px,-24px) scale(1.08)}66%{transform:translate(-16px,14px) scale(.94)}}
+    .blob{animation:blob 14s ease-in-out infinite;filter:blur(46px)}
+    .btn-press{transition:transform .08s,background .15s,box-shadow .2s}.btn-press:active{transform:scale(.97)}
+    .field{transition:border-color .15s,box-shadow .15s,background .15s}
+    .field:focus-within{border-color:#3B82F6;box-shadow:0 0 0 4px rgba(59,130,246,.12)}
+    .scroll::-webkit-scrollbar{width:8px}.scroll::-webkit-scrollbar-thumb{background:#293548;border-radius:99px}
+    .spin{animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen">
+<div class="min-h-screen grid lg:grid-cols-2">
+
+  <!-- ===== LEFT · BRAND PANEL ===== -->
+  <div class="relative hidden lg:flex flex-col justify-between overflow-hidden bg-panel p-12 border-r hairline">
+    <div class="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-brand/30 blob"></div>
+    <div class="absolute bottom-0 right-0 w-96 h-96 rounded-full bg-indigo-500/25 blob" style="animation-delay:-6s"></div>
+    <div class="absolute inset-0 grid-bg opacity-60"></div>
+
+    <div class="relative z-10 flex items-center gap-3">
+      <a href="/" class="grid place-items-center w-10 h-10 rounded-xl bg-gradient-to-br from-brand to-indigo-500 shadow-glow">
+        <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </a>
+      <span class="font-extrabold text-xl tracking-tight">Pulse</span>
+    </div>
+
+    <div class="relative z-10 in">
+      <h2 class="text-4xl font-extrabold leading-[1.1] tracking-tight max-w-md">
+        Where teams talk in <span class="bg-gradient-to-r from-brand-400 to-indigo-400 bg-clip-text text-transparent">real time.</span>
+      </h2>
+      <p class="mt-4 text-ink2 text-lg max-w-md">Secure messaging with live typing, reactions, presence and end-to-end session control. Built for people who ship.</p>
+      <div class="mt-8 space-y-3 max-w-md">
+        <div class="flex items-center gap-3 text-sm text-slate-300"><span class="grid place-items-center w-7 h-7 rounded-lg bg-ok/15 text-ok"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Realtime WebSocket delivery</div>
+        <div class="flex items-center gap-3 text-sm text-slate-300"><span class="grid place-items-center w-7 h-7 rounded-lg bg-ok/15 text-ok"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Device &amp; active-session management</div>
+        <div class="flex items-center gap-3 text-sm text-slate-300"><span class="grid place-items-center w-7 h-7 rounded-lg bg-ok/15 text-ok"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> JWT auth with refresh-token rotation</div>
+      </div>
+    </div>
+
+    <div class="relative z-10 flex items-center gap-3 text-sm text-ink2">
+      <div class="flex -space-x-2">
+        <span class="w-8 h-8 rounded-full border-2 border-panel grid place-items-center text-[11px] font-bold text-white" style="background:#EC4899">MA</span>
+        <span class="w-8 h-8 rounded-full border-2 border-panel grid place-items-center text-[11px] font-bold text-white" style="background:#22C55E">JD</span>
+        <span class="w-8 h-8 rounded-full border-2 border-panel grid place-items-center text-[11px] font-bold text-white" style="background:#F59E0B">SК</span>
+      </div>
+      Trusted by builders shipping realtime products.
+    </div>
+  </div>
+
+  <!-- ===== RIGHT · FORM ===== -->
+  <div class="relative flex items-center justify-center p-6 sm:p-10 bg-ink">
+    <div class="absolute top-6 right-6 text-sm text-ink2">{% block topright %}{% endblock %}</div>
+    <div class="w-full max-w-sm in">{% block card %}{% endblock %}</div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" x-data x-cloak style="display:none" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl glass border hairline shadow-soft text-sm font-medium"></div>
+
+<script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<script>
+  // Shared, reusable auth helpers (no per-page duplication)
+  window.Pulse = {
+    api: '/api/v1',
+    async post(path, body){
+      const res = await fetch(this.api+path, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+      });
+      let data={}; try{ data = await res.json(); }catch(_){}
+      return { ok: res.ok, status: res.status, data };
+    },
+    // Normalise our envelope + the legacy {error|message} shapes into one message
+    msg(data, fallback){
+      if(!data) return fallback;
+      if(data.error && typeof data.error==='object') return data.error.message || fallback;
+      if(typeof data.error==='string') return data.error;
+      if(data.message) return data.message;
+      if(data.detail) return data.detail;
+      return fallback;
+    },
+    saveTokens(t, remember){
+      if(!t) return;
+      // Always localStorage so authentication is shared across all tabs (the
+      // per-tab sessionStorage split was the multi-tab inconsistency bug).
+      // Clear any legacy sessionStorage copy from older sessions.
+      sessionStorage.removeItem('pulse.access'); sessionStorage.removeItem('pulse.refresh');
+      localStorage.setItem('pulse.access', t.access_token||'');
+      localStorage.setItem('pulse.refresh', t.refresh_token||'');
+      localStorage.setItem('pulse.remember', remember ? '1' : '0');
+    },
+    nextUrl(){ const n=new URLSearchParams(location.search).get('next'); return (n && n.startsWith('/')) ? n : '/chat/'; },
+    toast(text){
+      const el=document.getElementById('toast'); el.textContent=text; el.style.display='';
+      clearTimeout(this._t); this._t=setTimeout(()=>el.style.display='none', 2400);
+    },
+    // Password strength aligned with the backend validator (len8+, upper, lower, digit, symbol)
+    strength(pw){
+      const sym = /[!@#$%^&*()?,._\-=\[\]"':;]/.test(pw);
+      let s=0; if(pw.length>=8)s++; if(/[A-Z]/.test(pw))s++; if(/[a-z]/.test(pw))s++; if(/\d/.test(pw))s++; if(sym)s++;
+      return Math.min(s,4); // 0..4
+    }
+  };
+</script>
+{% block script %}{% endblock %}
+</body>
+</html>

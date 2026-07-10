@@ -1,5 +1,6 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+from rest_framework_simplejwt.views import TokenRefreshView
 from api.auth.views.login_views import LoginView
 from api.auth.views.register_views import RegisterViews
 from api.auth.views.verifications_views import VerificationsOTPView, VerificationsOTPLinkView, \
@@ -15,6 +16,7 @@ router.include_root_view = False
 
 urlpatterns = [
     path("auth/login/", LoginView.as_view()),
+    path("auth/token/refresh/", TokenRefreshView.as_view()),
     path("auth/resend/<str:otp_type>/", ResendVerificationsOTPView.as_view()),
     path("auth/register/", RegisterViews.as_view()),
     path("auth/register/otp/verify/", VerificationsOTPView.as_view()),

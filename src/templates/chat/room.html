@@ -1,50 +1,1227 @@
-<!-- chat/templates/chat/room.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en" class="dark">
 <head>
     <meta charset="utf-8"/>
-    <title>Chat Room</title>
-</head>
-<body>
-    <textarea id="chat-log" cols="100" rows="20"></textarea><br>
-    <input id="chat-message-input" type="text" size="100"><br>
-    <input id="chat-message-submit" type="button" value="Send">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Pulse · {{ room_name }}</title>
     {{ room_name|json_script:"room-name" }}
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        const roomName = JSON.parse(document.getElementById('room-name').textContent);
-
-        const chatSocket = new WebSocket(
-            'ws://'
-            + window.location.host
-            + '/ws/chat/'
-            + roomName
-            + '/'
-        );
-
-        chatSocket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
-            document.querySelector('#chat-log').value += (data.message + '\n');
-        };
-
-        chatSocket.onclose = function(e) {
-            console.error('Chat socket closed unexpectedly');
-        };
-
-        document.querySelector('#chat-message-input').focus();
-        document.querySelector('#chat-message-input').onkeyup = function(e) {
-            if (e.key === 'Enter') {  // enter, return
-                document.querySelector('#chat-message-submit').click();
-            }
-        };
-
-        document.querySelector('#chat-message-submit').onclick = function(e) {
-            const messageInputDom = document.querySelector('#chat-message-input');
-            const message = messageInputDom.value;
-            chatSocket.send(JSON.stringify({
-                'message': message
-            }));
-            messageInputDom.value = '';
-        };
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              ink:      '#0F172A',
+              panel:    '#111827',
+              card:     '#1E293B',
+              hair:     '#243149',
+              brand:    { DEFAULT: '#3B82F6', 600: '#2563EB', 400: '#60A5FA' },
+              ok:       '#22C55E',
+              warn:     '#F59E0B',
+              danger:   '#EF4444',
+              ink2:     '#94A3B8',
+            },
+            fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+            boxShadow: {
+              glow: '0 0 0 1px rgba(59,130,246,.35), 0 8px 30px -8px rgba(59,130,246,.45)',
+              soft: '0 10px 40px -12px rgba(0,0,0,.55)',
+            },
+            keyframes: {
+              floatIn:  { '0%': { opacity: 0, transform: 'translateY(8px) scale(.98)' }, '100%': { opacity: 1, transform: 'translateY(0) scale(1)' } },
+              pop:      { '0%': { transform: 'scale(.8)', opacity: 0 }, '100%': { transform: 'scale(1)', opacity: 1 } },
+              pulse2:   { '0%,100%': { opacity: 1 }, '50%': { opacity: .35 } },
+              shimmer:  { '100%': { transform: 'translateX(100%)' } },
+              blink:    { '0%,80%,100%': { transform: 'translateY(0)', opacity: .4 }, '40%': { transform: 'translateY(-3px)', opacity: 1 } },
+            },
+            animation: {
+              floatIn: 'floatIn .28s cubic-bezier(.2,.8,.2,1) both',
+              pop:     'pop .18s ease-out both',
+              pulse2:  'pulse2 2s ease-in-out infinite',
+            },
+          },
+        },
+      }
     </script>
+
+    <style>
+      *{ -webkit-font-smoothing:antialiased; }
+      html,body{ height:100%; }
+      body{ background:#0F172A; font-family:'Inter',sans-serif; overflow:hidden; }
+      [x-cloak]{ display:none !important; }
+
+      /* Ambient background glows */
+      .aurora::before{ content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+        background:
+          radial-gradient(600px 400px at 12% -5%, rgba(59,130,246,.18), transparent 60%),
+          radial-gradient(700px 500px at 100% 110%, rgba(139,92,246,.14), transparent 55%); }
+
+      .glass{ background:rgba(30,41,59,.6); backdrop-filter:blur(14px) saturate(140%); }
+      .hairline{ border-color:rgba(148,163,184,.10); }
+
+      /* Scrollbar */
+      .scroll{ scrollbar-width:thin; scrollbar-color:#334155 transparent; }
+      .scroll::-webkit-scrollbar{ width:8px; height:8px; }
+      .scroll::-webkit-scrollbar-thumb{ background:#293548; border-radius:99px; border:2px solid transparent; background-clip:content-box; }
+      .scroll::-webkit-scrollbar-thumb:hover{ background:#3b4a63; background-clip:content-box; }
+
+      .msg-enter{ animation:floatIn .28s cubic-bezier(.2,.8,.2,1) both; }
+      .react-pop{ animation:pop .18s ease-out both; }
+
+      .dot{ width:6px; height:6px; border-radius:99px; background:#94A3B8; display:inline-block; animation:blink 1.2s infinite; }
+      .dot:nth-child(2){ animation-delay:.15s; } .dot:nth-child(3){ animation-delay:.3s; }
+      @keyframes blink{ 0%,80%,100%{ transform:translateY(0); opacity:.35 } 40%{ transform:translateY(-3px); opacity:1 } }
+
+      .online-ring{ box-shadow:0 0 0 2px #111827, 0 0 0 4px rgba(34,197,94,.35); }
+      .pulse-ok::after{ content:''; position:absolute; inset:0; border-radius:99px; box-shadow:0 0 0 0 rgba(34,197,94,.6); animation:ring 1.8s infinite; }
+      @keyframes ring{ 0%{ box-shadow:0 0 0 0 rgba(34,197,94,.5) } 100%{ box-shadow:0 0 0 8px rgba(34,197,94,0) } }
+
+      .skeleton{ position:relative; overflow:hidden; background:#1b2536; }
+      .skeleton::after{ content:''; position:absolute; inset:0; transform:translateX(-100%);
+        background:linear-gradient(90deg,transparent,rgba(148,163,184,.10),transparent); animation:shimmer 1.4s infinite; }
+      @keyframes shimmer{ 100%{ transform:translateX(100%) } }
+
+      .nav-item{ transition:transform .15s ease, background .15s ease; }
+      .nav-item:hover{ transform:translateX(2px); }
+      textarea{ resize:none; }
+      .btn-press{ transition:transform .08s ease; } .btn-press:active{ transform:scale(.94); }
+      .fade-scale-enter-active,.fade-scale-leave-active{ transition:all .18s ease; }
+    </style>
+</head>
+
+<body class="text-slate-100 aurora">
+<div id="app" x-data="chatApp()" x-init="init()" x-cloak
+     class="relative z-10 h-screen w-screen flex overflow-hidden"
+     @keydown.window.escape="closeAll()"
+     @keydown.window.ctrl.k.prevent="ui.search=true"
+     @dragover.prevent="dragging=true" @dragleave.prevent="dragging=false"
+     @drop.prevent="onDrop($event)">
+
+  <!-- ============ LEFT SIDEBAR ============ -->
+  <aside class="flex-shrink-0 flex flex-col bg-panel/90 glass border-r hairline transition-all duration-300"
+         :class="ui.sidebar ? 'w-[300px]' : 'w-[76px]'">
+
+    <!-- Logo -->
+    <div class="h-16 flex items-center gap-3 px-4 border-b hairline">
+      <div class="relative grid place-items-center w-9 h-9 rounded-xl bg-gradient-to-br from-brand to-indigo-500 shadow-glow">
+        <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <div x-show="ui.sidebar" x-transition.opacity class="min-w-0">
+        <p class="font-extrabold tracking-tight leading-none">Pulse</p>
+        <p class="text-[11px] text-ink2 mt-0.5">Realtime workspace</p>
+      </div>
+      <button @click="ui.sidebar=!ui.sidebar" class="btn-press ml-auto grid place-items-center w-8 h-8 rounded-lg text-ink2 hover:text-slate-100 hover:bg-white/5" :title="ui.sidebar?'Collapse':'Expand'">
+        <svg class="w-4 h-4" :class="!ui.sidebar && 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+    </div>
+
+    <!-- Search + actions -->
+    <div class="p-3 space-y-2" x-show="ui.sidebar" x-transition.opacity>
+      <button @click="ui.search=true" class="btn-press w-full flex items-center gap-2 px-3 h-10 rounded-xl bg-white/[.04] hover:bg-white/[.07] border hairline text-ink2 text-sm">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <span>Search</span>
+        <kbd class="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-white/5 border hairline">⌘K</kbd>
+      </button>
+      <div class="flex gap-2">
+        <button @click="form={name:'',desc:'',vis:'Public'};formError='';existingSlug='';ui.create=true" class="btn-press flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl bg-brand hover:bg-brand-600 text-white text-[13px] font-semibold shadow-glow">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5v14"/></svg> New
+        </button>
+        <button @click="ui.join=true;loadDiscover()" class="btn-press flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl bg-white/[.05] hover:bg-white/[.09] border hairline text-slate-200 text-[13px] font-semibold">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg> Join
+        </button>
+      </div>
+    </div>
+
+    <!-- Chat lists (real groups from the database) -->
+    <div class="flex-1 overflow-y-auto scroll px-2 pb-3 space-y-4">
+      <div>
+        <p x-show="ui.sidebar" class="px-3 pt-1 pb-2 text-[11px] font-semibold uppercase tracking-wider text-ink2">Groups</p>
+        <template x-for="c in groups" :key="c.slug">
+          <a :href="'/chat/'+c.slug+'/'" x-html="chatRow(c)" class="block"></a>
+        </template>
+        <template x-if="!groups.length">
+          <div x-show="ui.sidebar" class="px-4 py-10 text-center">
+            <div class="mx-auto w-12 h-12 rounded-2xl grid place-items-center bg-white/[.04] border hairline mb-3">
+              <svg class="w-6 h-6 text-ink2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <p class="text-sm font-semibold text-slate-200">No groups yet</p>
+            <p class="text-xs text-ink2 mt-1">Create one or join a public group to start chatting.</p>
+            <button @click="ui.create=true" class="btn-press mt-3 px-3 h-9 rounded-xl bg-brand hover:bg-brand-600 text-white text-xs font-semibold shadow-glow">Create a group</button>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- User card -->
+    <div class="p-3 border-t hairline">
+      <div class="flex items-center gap-3 p-2 rounded-xl hover:bg-white/[.04] transition">
+        <a href="/account/" class="relative flex-shrink-0" title="Your profile">
+          <template x-if="me.avatar"><img :src="me.avatar" class="w-9 h-9 rounded-full object-cover"/></template>
+          <template x-if="!me.avatar"><div class="w-9 h-9 rounded-full grid place-items-center font-bold text-sm text-white" :style="'background:'+me.color" x-text="initials(me.name)"></div></template>
+          <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-ok online-ring"></span>
+        </a>
+        <a href="/account/" x-show="ui.sidebar" x-transition.opacity class="min-w-0 flex-1">
+          <p class="text-sm font-semibold truncate" x-text="me.name"></p>
+          <p class="text-[11px] text-ok" x-text="me.username ? '@'+me.username : 'Online'"></p>
+        </a>
+        <div x-show="ui.sidebar" class="flex items-center">
+          <a href="/account/" title="Profile & settings" class="btn-press grid place-items-center w-8 h-8 rounded-lg text-ink2 hover:text-slate-100 hover:bg-white/5">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </a>
+          <button @click="logout()" title="Logout" class="btn-press grid place-items-center w-8 h-8 rounded-lg text-ink2 hover:text-danger hover:bg-danger/10">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ CENTER ============ -->
+  <main class="flex-1 min-w-0 flex flex-col bg-ink relative">
+
+    <!-- Chat header -->
+    <header class="h-16 flex-shrink-0 flex items-center gap-3 px-4 md:px-6 border-b hairline glass">
+      <button @click="ui.sidebar=!ui.sidebar" class="md:hidden btn-press grid place-items-center w-9 h-9 rounded-lg text-ink2 hover:bg-white/5">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+      <div class="w-10 h-10 rounded-xl grid place-items-center font-bold text-white bg-gradient-to-br from-brand to-indigo-500 shadow-glow" x-text="initials(room)"></div>
+      <div class="min-w-0">
+        <div class="flex items-center gap-2">
+          <h1 class="font-bold text-[15px] truncate">#<span x-text="room"></span></h1>
+          <span class="text-[10px] px-1.5 py-0.5 rounded-md bg-brand/15 text-brand-400 font-semibold">Public</span>
+        </div>
+        <!-- Telegram-style live status under the header: recording > typing > online -->
+        <div class="text-xs h-4 flex items-center">
+          <template x-if="recorders.length">
+            <span class="flex items-center gap-1.5 text-red-400" x-transition>
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg>
+              <span x-text="recordingText()"></span><span class="opacity-70">…</span>
+            </span>
+          </template>
+          <template x-if="!recorders.length && typers.length">
+            <span class="flex items-center gap-1.5 text-brand-400" x-transition>
+              <span class="flex items-center gap-0.5"><span class="dot !bg-brand-400"></span><span class="dot !bg-brand-400"></span><span class="dot !bg-brand-400"></span></span>
+              <span x-text="typingText()"></span><span class="opacity-70">…</span>
+            </span>
+          </template>
+          <template x-if="!recorders.length && !typers.length">
+            <span class="flex items-center gap-1.5 text-ink2">
+              <span class="w-1.5 h-1.5 rounded-full" :class="connected ? 'bg-ok animate-pulse2' : 'bg-warn'"></span>
+              <span x-text="members.length"></span> online · <span x-text="connected ? 'connected' : 'reconnecting…'"></span>
+            </span>
+          </template>
+        </div>
+      </div>
+      <div class="ml-auto flex items-center gap-1">
+        <template x-for="ic in ['search','phone','video']" :key="ic">
+          <button class="btn-press hidden sm:grid place-items-center w-9 h-9 rounded-lg text-ink2 hover:text-slate-100 hover:bg-white/5" x-html="headerIcon(ic)"
+                  @click="ic==='search' ? (ui.search=true) : startCall(ic==='video'?'video':'voice')"
+                  :title="ic==='phone'?'Voice call':ic==='video'?'Video call':'Search'"></button>
+        </template>
+        <button @click="ui.notif=!ui.notif" class="relative btn-press grid place-items-center w-9 h-9 rounded-lg text-ink2 hover:text-slate-100 hover:bg-white/5">
+          <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          <span x-show="unread>0" x-transition class="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 grid place-items-center text-[10px] font-bold rounded-full bg-danger text-white" x-text="unread"></span>
+        </button>
+        <button @click="ui.right=!ui.right" class="btn-press grid place-items-center w-9 h-9 rounded-lg text-ink2 hover:text-slate-100 hover:bg-white/5" :class="ui.right && 'bg-white/5 text-slate-100'">
+          <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        </button>
+      </div>
+
+      <!-- Notifications dropdown -->
+      <div x-show="ui.notif" x-transition @click.outside="ui.notif=false" class="absolute right-4 top-16 w-80 glass border hairline rounded-2xl shadow-soft overflow-hidden z-40">
+        <div class="flex items-center justify-between px-4 h-12 border-b hairline">
+          <p class="font-semibold text-sm">Notifications</p>
+          <button @click="notifications=[];unread=0" class="text-xs text-brand-400 hover:underline">Mark all read</button>
+        </div>
+        <div class="max-h-80 overflow-y-auto scroll">
+          <template x-for="n in notifications" :key="n.id">
+            <div class="flex gap-3 px-4 py-3 hover:bg-white/[.03] border-b hairline">
+              <div class="w-8 h-8 rounded-full grid place-items-center text-xs font-bold text-white flex-shrink-0" :style="'background:'+n.color" x-text="initials(n.who)"></div>
+              <div class="min-w-0"><p class="text-[13px] leading-snug" x-html="n.html"></p><p class="text-[11px] text-ink2 mt-0.5" x-text="n.time"></p></div>
+            </div>
+          </template>
+          <template x-if="!notifications.length"><p class="px-4 py-10 text-center text-xs text-ink2">You're all caught up 🎉</p></template>
+        </div>
+      </div>
+    </header>
+
+    <!-- Offline banner -->
+    <div x-show="!connected" x-transition class="flex items-center justify-center gap-2 py-1.5 text-xs text-warn bg-warn/10 border-b border-warn/20">
+      <span class="w-1.5 h-1.5 rounded-full bg-warn animate-ping"></span> Connection lost — trying to reconnect…
+    </div>
+
+    <!-- Messages -->
+    <div id="scroll" class="flex-1 overflow-y-auto scroll px-4 md:px-8 py-6" @scroll="onScroll($event)">
+      <!-- skeleton -->
+      <template x-if="loading">
+        <div class="space-y-6 max-w-3xl mx-auto">
+          <template x-for="i in 5" :key="i">
+            <div class="flex gap-3" :class="i%2===0 && 'flex-row-reverse'">
+              <div class="w-9 h-9 rounded-full skeleton"></div>
+              <div class="space-y-2"><div class="h-3 w-24 rounded skeleton"></div><div class="h-9 rounded-2xl skeleton" :style="'width:'+(140+i*30)+'px'"></div></div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- empty state -->
+      <template x-if="!loading && !messages.length">
+        <div class="h-full grid place-items-center text-center">
+          <div class="animate-floatIn">
+            <div class="mx-auto w-20 h-20 rounded-3xl grid place-items-center bg-gradient-to-br from-brand/20 to-indigo-500/10 border hairline mb-4">
+              <svg class="w-9 h-9 text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <h3 class="text-lg font-bold">This is the start of #<span x-text="room"></span></h3>
+            <p class="text-sm text-ink2 mt-1 max-w-xs mx-auto">Say hello 👋 — messages, reactions and typing indicators sync live to everyone in the room.</p>
+          </div>
+        </div>
+      </template>
+
+      <!-- message groups -->
+      <div class="max-w-3xl mx-auto space-y-1">
+        <template x-for="(item, idx) in rendered" :key="item.key">
+          <div>
+            <!-- date divider -->
+            <template x-if="item.type==='date'">
+              <div class="flex items-center gap-3 my-6"><div class="flex-1 h-px bg-white/5"></div><span class="text-[11px] font-medium text-ink2 px-2" x-text="item.label"></span><div class="flex-1 h-px bg-white/5"></div></div>
+            </template>
+            <!-- unread divider -->
+            <template x-if="item.type==='unread'">
+              <div class="flex items-center gap-3 my-4"><div class="flex-1 h-px bg-danger/30"></div><span class="text-[10px] font-bold uppercase tracking-wider text-danger px-2">New</span><div class="flex-1 h-px bg-danger/30"></div></div>
+            </template>
+            <!-- message -->
+            <template x-if="item.type==='msg'">
+              <div class="group flex gap-3 py-0.5 msg-enter" :class="item.mine && 'flex-row-reverse'">
+                <div class="w-9 flex-shrink-0 flex flex-col items-center">
+                  <template x-if="item.head">
+                    <div class="w-9 h-9 rounded-full grid place-items-center text-xs font-bold text-white" :style="'background:'+item.color" x-text="initials(item.author)"></div>
+                  </template>
+                </div>
+                <div class="min-w-0 max-w-[78%] flex flex-col" :class="item.mine && 'items-end'">
+                  <template x-if="item.head">
+                    <div class="flex items-center gap-2 mb-1 px-1" :class="item.mine && 'flex-row-reverse'">
+                      <span class="text-[13px] font-semibold" :style="item.mine?'':'color:'+item.color" x-text="item.mine ? 'You' : item.author"></span>
+                      <span class="text-[11px] text-ink2" x-text="item.time"></span>
+                    </div>
+                  </template>
+                  <div class="relative">
+                    <div class="px-3.5 py-2 rounded-2xl text-[14px] leading-relaxed break-words shadow-sm"
+                         :class="item.mine ? 'bg-brand text-white rounded-tr-md' : 'bg-card text-slate-100 rounded-tl-md border hairline'">
+                      <template x-if="item.replyTo">
+                        <div class="mb-1.5 pl-2 border-l-2 rounded-sm" :class="item.mine?'border-white/50':'border-brand'">
+                          <p class="text-[11px] font-semibold opacity-80" x-text="item.replyTo.author"></p>
+                          <p class="text-[12px] opacity-70 truncate" x-text="item.replyTo.text"></p>
+                        </div>
+                      </template>
+                      <template x-if="item.image">
+                        <img :src="item.image" class="rounded-xl mb-1.5 max-h-64 object-cover" loading="lazy"/>
+                      </template>
+                      <!-- voice message player -->
+                      <template x-if="item.kind==='voice' && !item.deleted">
+                        <div class="flex items-center gap-2.5 min-w-[220px] py-0.5">
+                          <button @click="toggleVoice(item)" class="btn-press flex-shrink-0 w-9 h-9 grid place-items-center rounded-full" :class="item.mine ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-brand text-white hover:bg-brand-600'">
+                            <template x-if="!player(item.id).playing"><svg class="w-4 h-4 ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></template>
+                            <template x-if="player(item.id).playing"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg></template>
+                          </button>
+                          <div class="flex-1 h-8 flex items-center gap-[2px] cursor-pointer" @click="seekVoice(item,$event)">
+                            <template x-for="(b,i) in bars(item)" :key="i">
+                              <span class="flex-1 rounded-full transition-colors" :style="'height:'+Math.max(14,b)+'%'"
+                                    :class="(i/bars(item).length) <= player(item.id).progress ? (item.mine?'bg-white':'bg-brand') : (item.mine?'bg-white/35':'bg-ink2/40')"></span>
+                            </template>
+                          </div>
+                          <div class="flex flex-col items-end flex-shrink-0 gap-0.5">
+                            <span class="text-[11px] tabular-nums leading-none" :class="item.mine?'text-white/85':'text-ink2'" x-text="voiceDur(item)"></span>
+                            <div class="flex items-center gap-1">
+                              <button @click="cycleSpeed(item)" class="text-[9px] font-bold px-1 py-px rounded leading-none" :class="item.mine?'bg-white/20 text-white':'bg-black/25 text-ink2'" x-text="player(item.id).speed+'x'"></button>
+                              <a :href="item.audio" :download="'voice-'+item.id+'.webm'" class="opacity-60 hover:opacity-100" :class="item.mine?'text-white':'text-ink2'" title="Download"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></a>
+                            </div>
+                          </div>
+                        </div>
+                      </template>
+                      <span x-show="item.text" x-html="format(item.text)"></span>
+                      <template x-if="item.edited"><span class="text-[10px] opacity-60 ml-1.5">(edited)</span></template>
+                      <template x-if="item.mine && !item.deleted"><span class="ml-1 align-middle inline-flex" x-html="ticks(item.status)"></span></template>
+                    </div>
+
+                    <!-- hover actions -->
+                    <div class="absolute -top-3 transition flex items-center gap-0.5 p-0.5 rounded-lg glass border hairline shadow-soft"
+                         :class="[item.mine ? 'left-0' : 'right-0', menuFor===item.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100']">
+                      <template x-for="e in ['👍','❤️','😂','🎉','🔥']" :key="e">
+                        <button @click="react(item.id, e)" class="btn-press w-7 h-7 grid place-items-center rounded-md hover:bg-white/10 text-sm" x-text="e"></button>
+                      </template>
+                      <div class="w-px h-4 bg-white/10 mx-0.5"></div>
+                      <button @click="reply=item" class="btn-press w-7 h-7 grid place-items-center rounded-md hover:bg-white/10 text-ink2 hover:text-slate-100" title="Reply">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17l-5-5 5-5"/><path d="M4 12h11a4 4 0 0 1 4 4v3"/></svg>
+                      </button>
+                      <button @click.stop="menuFor = menuFor===item.id ? null : item.id" class="btn-press w-7 h-7 grid place-items-center rounded-md hover:bg-white/10 text-ink2 hover:text-slate-100" title="More">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+                      </button>
+                    </div>
+
+                    <!-- context menu (drops from the ⋯ button; closes only on outside click) -->
+                    <div x-show="menuFor===item.id" x-transition @click.outside="menuFor=null"
+                         class="absolute z-40 top-5 w-40 py-1 glass border hairline rounded-xl shadow-soft text-sm"
+                         :class="item.mine ? 'left-0' : 'right-0'">
+                      <button @click="copyMsg(item);menuFor=null" class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-white/5 text-slate-200"><svg class="w-4 h-4 text-ink2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</button>
+                      <button @click="reply=item;menuFor=null" class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-white/5 text-slate-200"><svg class="w-4 h-4 text-ink2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17l-5-5 5-5"/><path d="M4 12h11a4 4 0 0 1 4 4v3"/></svg>Reply</button>
+                      <button @click="forward(item);menuFor=null" class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-white/5 text-slate-200"><svg class="w-4 h-4 text-ink2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 17l5-5-5-5"/><path d="M20 12H9a4 4 0 0 0-4 4v3"/></svg>Forward</button>
+                      <template x-if="item.mine">
+                        <button @click="startEdit(item);menuFor=null" class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-white/5 text-slate-200"><svg class="w-4 h-4 text-ink2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Edit</button>
+                      </template>
+                      <template x-if="item.mine">
+                        <button @click="del(item);menuFor=null" class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-danger/10 text-danger"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>Delete</button>
+                      </template>
+                    </div>
+                  </div>
+
+                  <!-- reactions -->
+                  <template x-if="item.reactions && Object.keys(item.reactions).length">
+                    <div class="flex flex-wrap gap-1 mt-1 px-1" :class="item.mine && 'justify-end'">
+                      <template x-for="(cnt,emo) in item.reactions" :key="emo">
+                        <button @click="react(item.id,emo)" class="react-pop flex items-center gap-1 px-1.5 h-6 rounded-full bg-white/[.06] border hairline text-xs hover:bg-white/10">
+                          <span x-text="emo"></span><span class="text-ink2 font-medium" x-text="cnt"></span>
+                        </button>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+      <div id="anchor"></div>
+    </div>
+
+    <!-- Typing / recording indicator -->
+    <div class="px-8 h-6 flex items-center max-w-3xl mx-auto w-full" x-show="typers.length || recorders.length" x-transition>
+      <div x-show="recorders.length" class="flex items-center gap-2 text-xs text-red-400">
+        <span class="relative flex items-center justify-center w-3 h-3"><span class="absolute w-3 h-3 rounded-full bg-red-500/40 animate-ping"></span><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span></span>
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg>
+        <span x-text="recordingText()"></span>
+      </div>
+      <div x-show="!recorders.length && typers.length" class="flex items-center gap-2 text-xs text-ink2">
+        <span class="flex items-center gap-0.5"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>
+        <span x-text="typingText()"></span>
+      </div>
+    </div>
+
+    <!-- Reply / edit banner -->
+    <div x-show="reply||editing" x-transition class="max-w-3xl mx-auto w-full px-4 md:px-8">
+      <div class="flex items-center gap-3 px-3 py-2 rounded-t-xl bg-card/80 border hairline border-b-0">
+        <div class="w-1 self-stretch rounded" :class="editing?'bg-warn':'bg-brand'"></div>
+        <div class="min-w-0 flex-1">
+          <p class="text-[11px] font-semibold" :class="editing?'text-warn':'text-brand-400'" x-text="editing?'Editing message':'Replying to '+(reply&&reply.author)"></p>
+          <p class="text-xs text-ink2 truncate" x-text="editing ? editing.text : (reply&&reply.text)"></p>
+        </div>
+        <button @click="reply=null;cancelEdit()" class="btn-press w-6 h-6 grid place-items-center rounded text-ink2 hover:text-slate-100 hover:bg-white/10"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+    </div>
+
+    <!-- Composer -->
+    <div class="px-4 md:px-8 pb-5 pt-2">
+      <div class="max-w-3xl mx-auto">
+        <template x-if="attachment">
+          <div class="mb-2 inline-flex items-center gap-2 p-2 pr-3 rounded-xl bg-card border hairline">
+            <img :src="attachment" class="w-12 h-12 rounded-lg object-cover"/>
+            <span class="text-xs text-ink2">Image attached</span>
+            <button @click="attachment=null" class="btn-press w-5 h-5 grid place-items-center rounded text-ink2 hover:text-danger">✕</button>
+          </div>
+        </template>
+        <!-- upload progress -->
+        <div x-show="uploadPct>0" x-transition class="mb-2 h-1 rounded-full bg-white/10 overflow-hidden"><div class="h-full bg-brand transition-all" :style="'width:'+uploadPct+'%'"></div></div>
+
+        <!-- RECORDING BAR -->
+        <template x-if="rec.active">
+          <div class="flex items-center gap-3 p-2 pl-3 rounded-2xl bg-card/80 glass border shadow-glow" :class="rec.cancel ? 'border-danger' : 'hairline'">
+            <button @click="cancelRecord()" class="btn-press flex-shrink-0 w-10 h-10 grid place-items-center rounded-xl text-danger hover:bg-danger/10" title="Cancel">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+            </button>
+            <span class="relative flex items-center justify-center w-3 h-3 flex-shrink-0"><span class="absolute w-3 h-3 rounded-full bg-red-500/40 animate-ping"></span><span class="w-2 h-2 rounded-full bg-red-500"></span></span>
+            <span class="text-sm font-mono tabular-nums text-slate-200 flex-shrink-0" x-text="recTime()"></span>
+            <div class="flex-1 h-8 flex items-center gap-0.5 overflow-hidden">
+              <template x-for="(b,i) in rec.bars" :key="i"><span class="w-1 rounded-full bg-brand/70" :style="'height:'+Math.max(8,b)+'%'"></span></template>
+            </div>
+            <template x-if="!rec.locked">
+              <span class="text-xs flex-shrink-0" :class="rec.cancel?'text-danger font-semibold':'text-ink2'" x-text="rec.cancel?'release to cancel':'‹ slide to cancel'"></span>
+            </template>
+            <template x-if="rec.locked">
+              <button @click="finishRecord(true)" class="btn-press flex-shrink-0 w-10 h-10 grid place-items-center rounded-xl bg-brand hover:bg-brand-600 text-white shadow-glow" title="Send">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>
+              </button>
+            </template>
+          </div>
+        </template>
+
+        <!-- NORMAL COMPOSER -->
+        <div x-show="!rec.active" class="flex items-end gap-2 p-2 rounded-2xl bg-card/80 glass border hairline focus-within:shadow-glow transition"
+             :class="reply||editing ? 'rounded-t-none' : ''">
+          <button @click="$refs.file.click()" class="btn-press flex-shrink-0 w-10 h-10 grid place-items-center rounded-xl text-ink2 hover:text-slate-100 hover:bg-white/5" title="Attach">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          </button>
+          <input x-ref="file" type="file" accept="image/*" class="hidden" @change="onFile($event)"/>
+
+          <div class="relative flex-shrink-0">
+            <button @click="ui.emoji=!ui.emoji" class="btn-press w-10 h-10 grid place-items-center rounded-xl text-ink2 hover:text-slate-100 hover:bg-white/5" title="Emoji">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>
+            </button>
+            <div x-show="ui.emoji" x-transition @click.outside="ui.emoji=false" class="absolute bottom-12 left-0 w-64 p-2 glass border hairline rounded-2xl shadow-soft grid grid-cols-8 gap-1 z-30">
+              <template x-for="e in emojis" :key="e"><button @click="draft+=e;$refs.ta.focus()" class="btn-press w-7 h-7 grid place-items-center rounded-lg hover:bg-white/10 text-lg" x-text="e"></button></template>
+            </div>
+          </div>
+
+          <textarea x-ref="ta" x-model="draft" rows="1" @input="autogrow();ping()" @keydown="onKey($event)" @blur="stopTyping()"
+            placeholder="Message #{{ room_name }}"
+            class="flex-1 bg-transparent outline-none text-[14px] placeholder:text-ink2/70 py-2.5 max-h-40 scroll"></textarea>
+
+          <!-- hold-to-record mic (empty) OR send (has content) -->
+          <button x-show="!(draft.trim()||attachment||editing)"
+            @pointerdown.prevent="startRecord($event)"
+            class="btn-press flex-shrink-0 w-10 h-10 grid place-items-center rounded-xl text-ink2 hover:text-brand-400 hover:bg-white/5 select-none touch-none"
+            :title="canVoice() ? 'Hold to record · slide up to lock · slide left to cancel' : 'Sign in to record voice'">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg>
+          </button>
+          <button x-show="draft.trim()||attachment||editing" @click="send()" :disabled="!canSend()"
+            class="btn-press flex-shrink-0 w-10 h-10 grid place-items-center rounded-xl text-white transition disabled:opacity-40 disabled:cursor-not-allowed shadow-glow"
+            :class="editing ? 'bg-warn' : 'bg-brand hover:bg-brand-600'">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>
+          </button>
+        </div>
+        <p class="text-[11px] text-ink2/70 mt-1.5 px-1 hidden sm:block"><kbd class="px-1 rounded bg-white/5">Enter</kbd> to send · <kbd class="px-1 rounded bg-white/5">Shift+Enter</kbd> new line</p>
+      </div>
+    </div>
+
+    <!-- Drag overlay -->
+    <div x-show="dragging" x-transition class="absolute inset-0 z-40 grid place-items-center bg-ink/80 backdrop-blur-sm border-2 border-dashed border-brand m-3 rounded-3xl">
+      <div class="text-center"><svg class="w-12 h-12 mx-auto text-brand mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></svg><p class="font-semibold">Drop image to share</p></div>
+    </div>
+  </main>
+
+  <!-- ============ RIGHT PANEL ============ -->
+  <aside x-show="ui.right" x-transition:enter="transition duration-300" x-transition:enter-start="translate-x-full opacity-0" x-transition:enter-end="translate-x-0 opacity-100"
+         class="hidden lg:flex flex-col w-[320px] flex-shrink-0 bg-panel/90 glass border-l hairline">
+    <div class="h-16 flex items-center px-5 border-b hairline"><p class="font-bold">Group Info</p><button @click="ui.right=false" class="ml-auto btn-press w-8 h-8 grid place-items-center rounded-lg text-ink2 hover:bg-white/5"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="flex-1 overflow-y-auto scroll">
+      <div class="p-5 text-center border-b hairline">
+        <div class="w-20 h-20 mx-auto rounded-2xl grid place-items-center text-2xl font-extrabold text-white bg-gradient-to-br from-brand to-indigo-500 shadow-glow" x-text="initials(currentGroup ? currentGroup.name : room)"></div>
+        <h3 class="mt-3 font-bold text-lg">#<span x-text="currentGroup ? currentGroup.name : room"></span></h3>
+        <p class="text-xs text-ink2 mt-1" x-text="currentGroup ? (currentGroup.description || 'No description yet.') : 'Ad-hoc room (not a saved group).'"></p>
+        <p x-show="currentGroup" class="text-[11px] text-ink2 mt-1.5"><span x-text="currentGroup?.member_count"></span> members · <span x-text="currentGroup?.visibility"></span></p>
+        <div class="flex gap-2 mt-4">
+          <button class="btn-press flex-1 h-9 rounded-xl bg-white/[.05] hover:bg-white/[.09] border hairline text-sm font-medium">Invite</button>
+          <!-- Owner sees Delete; everyone else can Leave -->
+          <template x-if="isOwner()">
+            <button @click="askDelete()" class="btn-press flex-1 h-9 grid place-items-center rounded-xl bg-danger/10 hover:bg-danger/20 text-danger text-sm font-medium">Delete</button>
+          </template>
+          <template x-if="!isOwner()">
+            <a href="/chat/" class="btn-press flex-1 h-9 grid place-items-center rounded-xl bg-white/[.05] hover:bg-white/[.09] border hairline text-sm font-medium">Leave</a>
+          </template>
+        </div>
+      </div>
+      <div class="p-4">
+        <div class="flex gap-1 p-1 rounded-xl bg-white/[.04] mb-3">
+          <template x-for="t in ['Members','Media','Files']" :key="t">
+            <button @click="tab=t" class="flex-1 h-8 rounded-lg text-xs font-semibold transition" :class="tab===t ? 'bg-brand text-white shadow' : 'text-ink2 hover:text-slate-100'" x-text="t"></button>
+          </template>
+        </div>
+        <div x-show="tab==='Members'" class="space-y-1">
+          <template x-for="m in members" :key="m.id">
+            <div class="flex items-center gap-3 p-2 rounded-xl hover:bg-white/[.04]">
+              <div class="relative"><div class="w-9 h-9 rounded-full grid place-items-center text-xs font-bold text-white" :style="'background:'+m.color" x-text="initials(m.name)"></div><span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-ok online-ring"></span></div>
+              <div class="min-w-0"><p class="text-sm font-medium truncate" x-text="m.id===me.id ? m.name+' (you)' : m.name"></p><p class="text-[11px] text-ink2">Online</p></div>
+              <template x-if="m.id===me.id"><span class="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-brand/15 text-brand-400 font-semibold">Owner</span></template>
+            </div>
+          </template>
+        </div>
+        <div x-show="tab==='Media'" class="grid grid-cols-3 gap-2">
+          <template x-for="img in sharedMedia" :key="img"><img :src="img" class="aspect-square w-full rounded-lg object-cover"/></template>
+          <template x-if="!sharedMedia.length"><p class="col-span-3 py-8 text-center text-xs text-ink2">No media shared yet.</p></template>
+        </div>
+        <div x-show="tab==='Files'"><p class="py-8 text-center text-xs text-ink2">No files shared yet.</p></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MODALS ============ -->
+  <!-- Create Group -->
+  <template x-if="ui.create"><div x-html="modalCreate()"></div></template>
+  <div x-show="ui.create" x-transition.opacity @click="ui.create=false" class="fixed inset-0 z-50 bg-ink/70 backdrop-blur-sm grid place-items-center p-4">
+    <div @click.stop x-show="ui.create" x-transition class="w-full max-w-md glass border hairline rounded-3xl shadow-soft overflow-hidden">
+      <div class="h-28 bg-gradient-to-br from-brand/40 to-indigo-500/30 relative"><div class="absolute -bottom-8 left-6 w-16 h-16 rounded-2xl bg-card border-2 border-panel grid place-items-center text-ink2"><svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="3"/><path d="M3 7V5a2 2 0 0 1 2-2h2m10 0h2a2 2 0 0 1 2 2v2M3 17v2a2 2 0 0 0 2 2h2m10 0h2a2 2 0 0 0 2-2v-2"/></svg></div></div>
+      <div class="p-6 pt-12 space-y-4">
+        <h3 class="text-lg font-bold">Create a group</h3>
+        <div><label class="text-xs font-medium text-ink2">Group name</label><input x-model="form.name" type="text" placeholder="e.g. design-team" class="mt-1.5 w-full h-11 px-3.5 rounded-xl bg-white/[.04] border hairline outline-none focus:border-brand text-sm"/></div>
+        <div><label class="text-xs font-medium text-ink2">Description</label><textarea x-model="form.desc" rows="2" placeholder="What's this group about?" class="mt-1.5 w-full p-3 rounded-xl bg-white/[.04] border hairline outline-none focus:border-brand text-sm scroll"></textarea></div>
+        <div>
+          <label class="text-xs font-medium text-ink2">Visibility</label>
+          <div class="mt-1.5 grid grid-cols-3 gap-2">
+            <template x-for="v in ['Public','Private','Invite']" :key="v"><button @click="form.vis=v" class="h-10 rounded-xl text-xs font-semibold border transition" :class="form.vis===v?'bg-brand text-white border-brand':'bg-white/[.04] hairline text-ink2 hover:text-slate-100'" x-text="v"></button></template>
+          </div>
+        </div>
+        <template x-if="formError">
+          <div class="flex items-center gap-2 p-2.5 rounded-xl bg-danger/10 border border-danger/20">
+            <p class="text-xs text-danger flex-1" x-text="formError"></p>
+            <template x-if="existingSlug"><button @click="openExisting()" class="btn-press px-2.5 h-7 rounded-lg bg-brand text-white text-xs font-semibold flex-shrink-0">Open Chat</button></template>
+          </div>
+        </template>
+        <div class="flex gap-2 pt-1"><button @click="ui.create=false" class="btn-press flex-1 h-11 rounded-xl bg-white/[.05] hover:bg-white/[.09] border hairline text-sm font-semibold">Cancel</button><button @click="createGroup()" class="btn-press flex-1 h-11 rounded-xl bg-brand hover:bg-brand-600 text-white text-sm font-semibold shadow-glow">Create group</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Join Group -->
+  <div x-show="ui.join" x-transition.opacity @click="ui.join=false" class="fixed inset-0 z-50 bg-ink/70 backdrop-blur-sm grid place-items-center p-4">
+    <div @click.stop x-show="ui.join" x-transition class="w-full max-w-lg glass border hairline rounded-3xl shadow-soft overflow-hidden">
+      <div class="p-6 border-b hairline"><h3 class="text-lg font-bold">Discover groups</h3><div class="mt-3 flex items-center gap-2 px-3 h-11 rounded-xl bg-white/[.04] border hairline"><svg class="w-4 h-4 text-ink2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input x-model="joinQuery" @input.debounce.300ms="loadDiscover()" placeholder="Search public groups…" class="flex-1 bg-transparent outline-none text-sm"/></div></div>
+      <div class="p-4 max-h-80 overflow-y-auto scroll space-y-2">
+        <template x-for="g in discoverList" :key="g.slug">
+          <div class="flex items-center gap-3 p-3 rounded-2xl bg-white/[.03] border hairline hover:bg-white/[.05] transition">
+            <div class="w-11 h-11 rounded-xl grid place-items-center font-bold text-white flex-shrink-0" :style="'background:'+g.color" x-text="initials(g.name)"></div>
+            <div class="min-w-0 flex-1"><p class="font-semibold text-sm truncate">#<span x-text="g.name"></span></p><p class="text-xs text-ink2 truncate" x-text="g.members+' members'+(g.desc?' · '+g.desc:'')"></p></div>
+            <button @click="joinGroup(g.slug)" class="btn-press px-3.5 h-9 grid place-items-center rounded-xl bg-brand hover:bg-brand-600 text-white text-xs font-semibold flex-shrink-0">Join</button>
+          </div>
+        </template>
+        <template x-if="!discoverList.length"><p class="py-10 text-center text-xs text-ink2">No public groups found. Try a different search or create one.</p></template>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Search -->
+  <div x-show="ui.search" x-transition.opacity @click="ui.search=false" class="fixed inset-0 z-50 bg-ink/70 backdrop-blur-sm flex items-start justify-center pt-24 p-4">
+    <div @click.stop x-show="ui.search" x-transition class="w-full max-w-xl glass border hairline rounded-2xl shadow-soft overflow-hidden">
+      <div class="flex items-center gap-3 px-4 h-14 border-b hairline"><svg class="w-5 h-5 text-ink2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input x-ref="searchInput" x-model="searchQuery" placeholder="Search messages, people, groups…" class="flex-1 bg-transparent outline-none text-[15px]"/><kbd class="text-[10px] px-1.5 py-0.5 rounded bg-white/5 border hairline">ESC</kbd></div>
+      <div class="max-h-96 overflow-y-auto scroll p-2">
+        <p class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-ink2">Messages</p>
+        <template x-for="r in searchResults()" :key="r.id">
+          <button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[.05] text-left"><div class="w-8 h-8 rounded-full grid place-items-center text-xs font-bold text-white flex-shrink-0" :style="'background:'+r.color" x-text="initials(r.author)"></div><div class="min-w-0"><p class="text-[13px]" x-html="format(r.text)"></p><p class="text-[11px] text-ink2" x-text="r.author+' · '+r.time"></p></div></button>
+        </template>
+        <template x-if="searchQuery && !searchResults().length"><p class="px-3 py-8 text-center text-xs text-ink2">No matches for “<span x-text="searchQuery"></span>”.</p></template>
+        <template x-if="!searchQuery"><p class="px-3 py-8 text-center text-xs text-ink2">Type to search this conversation.</p></template>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div x-show="ui.settings" x-transition.opacity @click="ui.settings=false" class="fixed inset-0 z-50 bg-ink/70 backdrop-blur-sm grid place-items-center p-4">
+    <div @click.stop x-show="ui.settings" x-transition class="w-full max-w-md glass border hairline rounded-3xl shadow-soft p-6 space-y-5">
+      <h3 class="text-lg font-bold">Settings</h3>
+      <div><label class="text-xs font-medium text-ink2">Display name</label><input x-model="me.name" @change="saveMe()" class="mt-1.5 w-full h-11 px-3.5 rounded-xl bg-white/[.04] border hairline outline-none focus:border-brand text-sm"/></div>
+      <div class="flex items-center justify-between"><div><p class="text-sm font-medium">Theme</p><p class="text-xs text-ink2">Dark mode is optimised for long sessions.</p></div>
+        <button @click="toggleTheme()" class="btn-press w-14 h-8 rounded-full p-1 transition" :class="dark?'bg-brand':'bg-white/10'"><span class="block w-6 h-6 rounded-full bg-white transition-transform" :class="dark&&'translate-x-6'"></span></button></div>
+      <div class="flex items-center justify-between"><div><p class="text-sm font-medium">Sound notifications</p><p class="text-xs text-ink2">Play a chime on new messages.</p></div>
+        <button @click="sound=!sound" class="btn-press w-14 h-8 rounded-full p-1 transition" :class="sound?'bg-brand':'bg-white/10'"><span class="block w-6 h-6 rounded-full bg-white transition-transform" :class="sound&&'translate-x-6'"></span></button></div>
+      <button @click="ui.settings=false" class="btn-press w-full h-11 rounded-xl bg-brand hover:bg-brand-600 text-white text-sm font-semibold">Done</button>
+    </div>
+  </div>
+
+  <!-- ============ INCOMING CALL MODAL ============ -->
+  <div x-show="call.incoming" x-transition.opacity class="fixed inset-0 z-[70] bg-ink/80 backdrop-blur-md grid place-items-center p-4">
+    <div x-show="call.incoming" x-transition class="w-full max-w-xs glass border hairline rounded-3xl shadow-soft p-7 text-center">
+      <div class="relative mx-auto w-24 h-24 mb-4">
+        <span class="absolute inset-0 rounded-full bg-brand/30 animate-ping"></span>
+        <div class="relative w-24 h-24 rounded-full grid place-items-center text-3xl font-extrabold text-white shadow-glow" :style="'background:'+ (members.find(m=>m.id===call.withId)?.color || '#3B82F6')" x-text="initials(call.withName)"></div>
+      </div>
+      <h3 class="text-xl font-bold" x-text="call.withName"></h3>
+      <p class="text-sm text-ink2 mt-1 flex items-center justify-center gap-1.5">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><template x-if="call.type==='video'"><path d="m23 7-7 5 7 5V7zM1 5h15v14H1z"/></template><template x-if="call.type!=='video'"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.18 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></template></svg>
+        Incoming <span x-text="call.type"></span> call…
+      </p>
+      <div class="flex items-center justify-center gap-6 mt-7">
+        <button @click="rejectCall()" class="btn-press w-14 h-14 grid place-items-center rounded-full bg-danger text-white shadow-lg" title="Decline">
+          <svg class="w-6 h-6 rotate-[135deg]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.18 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </button>
+        <button @click="acceptCall()" class="btn-press w-14 h-14 grid place-items-center rounded-full bg-ok text-white shadow-lg animate-pulse2" title="Accept">
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.18 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ IN-CALL PANEL ============ -->
+  <div x-show="call.active" x-transition.opacity class="fixed inset-0 z-[70] bg-ink"
+       :class="call.type==='video' ? '' : 'bg-gradient-to-b from-panel to-ink'">
+    <!-- remote media (video fills; for voice it's an audio-only hidden element) -->
+    <video x-ref="remoteMedia" autoplay playsinline class="absolute inset-0 w-full h-full object-cover" :class="call.type==='video' ? '' : 'opacity-0 pointer-events-none'"></video>
+
+    <!-- voice-call centrepiece -->
+    <div x-show="call.type!=='video'" class="absolute inset-0 grid place-content-center text-center">
+      <div class="relative mx-auto w-28 h-28 mb-5">
+        <span class="absolute inset-0 rounded-full bg-brand/20" :class="call.status==='ongoing' && 'animate-ping'"></span>
+        <div class="relative w-28 h-28 rounded-full grid place-items-center text-4xl font-extrabold text-white shadow-glow" :style="'background:'+ (members.find(m=>m.id===call.withId)?.color || '#3B82F6')" x-text="initials(call.withName)"></div>
+      </div>
+      <h3 class="text-2xl font-bold" x-text="call.withName"></h3>
+      <p class="text-ink2 mt-1 text-sm" x-text="call.status==='ongoing' ? callTime() : (call.status==='calling'?'Ringing…':'Connecting…')"></p>
+    </div>
+
+    <!-- video-call overlays -->
+    <template x-if="call.type==='video'">
+      <div>
+        <video x-ref="localMedia" autoplay playsinline muted class="absolute top-4 right-4 w-32 sm:w-44 aspect-video object-cover rounded-2xl border-2 border-white/20 shadow-soft bg-black" :class="call.camOff && 'hidden'"></video>
+        <div class="absolute top-5 left-5 px-3 py-1.5 rounded-full glass border hairline text-sm font-medium">
+          <span x-text="call.withName"></span> · <span x-text="call.status==='ongoing' ? callTime() : 'connecting…'"></span>
+        </div>
+      </div>
+    </template>
+
+    <!-- control bar -->
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3 p-2 rounded-full glass border hairline shadow-soft">
+      <button @click="toggleMute()" class="btn-press w-12 h-12 grid place-items-center rounded-full transition" :class="call.muted ? 'bg-white text-ink' : 'bg-white/10 text-white hover:bg-white/20'" :title="call.muted?'Unmute':'Mute'">
+        <template x-if="!call.muted"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg></template>
+        <template x-if="call.muted"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l22 22M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V5a3 3 0 0 0-5.94-.6M19 10v2a7 7 0 0 1-.11 1.23M12 19v3"/></svg></template>
+      </button>
+      <template x-if="call.type==='video'">
+        <button @click="toggleCam()" class="btn-press w-12 h-12 grid place-items-center rounded-full transition" :class="call.camOff ? 'bg-white text-ink' : 'bg-white/10 text-white hover:bg-white/20'" :title="call.camOff?'Camera on':'Camera off'">
+          <template x-if="!call.camOff"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m23 7-7 5 7 5V7zM1 5h15v14H1z"/></svg></template>
+          <template x-if="call.camOff"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l22 22M16 16H1V5m5-1h9v6"/></svg></template>
+        </button>
+      </template>
+      <button @click="hangup()" class="btn-press w-14 h-12 grid place-items-center rounded-full bg-danger text-white hover:brightness-110" title="End call">
+        <svg class="w-5 h-5 rotate-[135deg]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.18 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ============ DELETE GROUP CONFIRMATION ============ -->
+  <div x-show="ui.confirmDelete" x-transition.opacity @click="ui.confirmDelete=false" class="fixed inset-0 z-[75] bg-ink/75 backdrop-blur-sm grid place-items-center p-4">
+    <div @click.stop x-show="ui.confirmDelete" x-transition class="w-full max-w-sm glass border hairline rounded-3xl shadow-soft p-6 text-center">
+      <div class="mx-auto w-14 h-14 rounded-2xl grid place-items-center bg-danger/15 text-danger mb-4">
+        <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+      </div>
+      <h3 class="text-lg font-bold">Delete <span class="text-danger" x-text="'#'+(currentGroup ? currentGroup.name : room)"></span>?</h3>
+      <p class="text-sm text-ink2 mt-2">This group has <strong class="text-slate-200" x-text="currentGroup?.member_count || 0"></strong> member(s). It will be removed for everyone. Messages are archived and recoverable, but the group disappears from all sidebars immediately.</p>
+      <div class="flex gap-2 mt-6">
+        <button @click="ui.confirmDelete=false" class="btn-press flex-1 h-11 rounded-xl bg-white/[.05] hover:bg-white/[.09] border hairline text-sm font-semibold">Cancel</button>
+        <button @click="doDelete()" class="btn-press flex-1 h-11 rounded-xl bg-danger hover:brightness-110 text-white text-sm font-semibold">Delete group</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div x-show="toast" x-transition class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] px-4 py-2.5 rounded-xl glass border hairline shadow-soft text-sm font-medium" x-text="toast"></div>
+</div>
+
+<script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<script>
+function chatApp(){
+  return {
+    room: JSON.parse(document.getElementById('room-name').textContent),
+    socket:null, connected:false, loading:true,
+    me:{}, authed:false, messages:[], members:[], typers:[], recorders:[], notifications:[], unread:0,
+    draft:'', reply:null, editing:null, attachment:null,
+    menuFor:null, dragging:false, toast:'', tab:'Members',
+    dark:true, sound:false, atBottom:true,
+    joinQuery:'', searchQuery:'',
+    groups:[], discoverList:[], currentGroup:null, existingSlug:'',
+    form:{name:'',desc:'',vis:'Public'}, formError:'',
+    ui:{sidebar:true,right:true,create:false,join:false,search:false,settings:false,emoji:false,notif:false,confirmDelete:false},
+    emojis:['😀','😂','😍','🥰','😎','🤔','😅','😭','👍','🙏','🔥','🎉','❤️','💯','✨','🚀','👀','😴','🤝','👏','💪','🙌','😇','🥳','😜','🤯','🫡','🤩','😤','🧠','⚡','🌟'],
+    _typingTimer:null, _typersTimers:{}, _recTimers:{}, _read:new Set(),
+    call:{active:false,incoming:false,type:'voice',status:'',withName:'',withId:'',muted:false,camOff:false,seconds:0,callId:null,fullscreen:false},
+    _callSock:null,_pc:null,_localStream:null,_callTimer:null,_incomingOffer:null,_iceQueue:[],
+    rec:{active:false,locked:false,cancel:false,ms:0,bars:[]}, uploadPct:0, players:{},
+    _defBars:[26,44,20,58,34,66,30,52,24,62,40,28,56,38,48,30,54,34,44,60,38,24,50,32,58,42,28,52,38,48,26,44,20,58,34,66,30,52,24,62],
+    _mr:null,_stream:null,_actx:null,_analyser:null,_recRAF:null,_recTick:null,_chunks:[],_recStartX:0,_recStartY:0,_lastTyping:0,_typingSent:false,_audio:{},
+
+    async init(){
+      // ---- AUTH GATE: no guest access to the chat ----
+      const token = localStorage.getItem('pulse.access');
+      if(!token){ return this.gotoLogin(); }
+      const me = await this.resolveUser();
+      if(!me) return;                 // resolveUser() redirects on failure
+      this.me = me; this.authed = true;
+      this.members = [this.me];
+
+      this.loadCache();
+      this.connect();
+      this.initCallSocket();
+      // Load the user's REAL groups from the DB — never auto-create anything.
+      this.loadGroups();
+      this.loadCurrentGroup();
+      this.$watch('ui.search', v=>{ if(v) this.$nextTick(()=>this.$refs.searchInput?.focus()); });
+      // Cross-tab auth sync: if another tab logs out, this tab follows.
+      window.addEventListener('storage', (e)=>{ if(e.key==='pulse.access' && !e.newValue) this.gotoLogin(); });
+      setTimeout(()=>{ this.loading=false; this.scrollToBottom(true); }, 1500);
+    },
+    gotoLogin(){ location.href='/login/?next='+encodeURIComponent(location.pathname); },
+    async resolveUser(){
+      let res = await fetch('/api/v1/accounts/me/', {headers:{Authorization:'Bearer '+localStorage.getItem('pulse.access')}});
+      if(res.status===401){
+        if(!await this.refreshToken()){ this.gotoLogin(); return null; }
+        res = await fetch('/api/v1/accounts/me/', {headers:{Authorization:'Bearer '+localStorage.getItem('pulse.access')}});
+      }
+      if(!res.ok){ this.gotoLogin(); return null; }
+      const d = (await res.json()).data;
+      const name = (d.profile.display_name || d.full_name || d.email.split('@')[0]).trim();
+      return { id:d.id, name, color:this.colorFor(d.id), username:d.profile.username, avatar:d.profile.avatar, email:d.email, authenticated:true };
+    },
+    async refreshToken(){
+      const refresh = localStorage.getItem('pulse.refresh'); if(!refresh) return false;
+      const res = await fetch('/api/v1/auth/token/refresh/', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({refresh})});
+      if(!res.ok) return false;
+      const d = await res.json(); if(!d.access) return false;
+      localStorage.setItem('pulse.access', d.access); return true;
+    },
+    colorFor(seed){ const p=['#3B82F6','#8B5CF6','#EC4899','#22C55E','#F59E0B','#06B6D4','#EF4444','#14B8A6']; let s=0; for(const c of String(seed)) s+=c.charCodeAt(0); return p[s%p.length]; },
+    logout(){
+      const token=this.token(), refresh=localStorage.getItem('pulse.refresh');
+      fetch('/api/v1/accounts/logout/', {method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify({refresh})})
+        .finally(()=>{ localStorage.removeItem('pulse.access'); localStorage.removeItem('pulse.refresh'); location.href='/login/'; });
+    },
+
+    /* ---------- identity ---------- */
+    loadMe(){
+      let m = JSON.parse(localStorage.getItem('pulse.me')||'null');
+      if(!m){ const n=Math.floor(1000+Math.random()*9000); m={id:crypto.randomUUID(),name:'Guest '+n,color:this.pickColor()}; localStorage.setItem('pulse.me',JSON.stringify(m)); }
+      return m;
+    },
+    saveMe(){ localStorage.setItem('pulse.me',JSON.stringify(this.me)); this.raw({type:'presence',state:'ping',author:this.mini()}); },
+    mini(){ return {id:this.me.id,name:this.me.name,color:this.me.color}; },
+    pickColor(){ const c=['#3B82F6','#8B5CF6','#EC4899','#22C55E','#F59E0B','#06B6D4','#EF4444','#14B8A6']; return c[Math.floor(Math.random()*c.length)]; },
+
+    /* ---------- websocket ---------- */
+    connect(){
+      const proto = location.protocol==='https:'?'wss':'ws';
+      const token = localStorage.getItem('pulse.access') || '';
+      const qs = `?name=${encodeURIComponent(this.me.name)}&key=${encodeURIComponent(this.me.id)}`
+               + (token ? `&token=${encodeURIComponent(token)}` : '');
+      this.socket = new WebSocket(`${proto}://${location.host}/ws/chat/${this.room}/${qs}`);
+      this.socket.onopen = ()=>{ this.connected=true; };
+      this.socket.onclose = ()=>{ this.connected=false; setTimeout(()=>this.connect(), 1500); };
+      this.socket.onmessage = (e)=> this.onMessage(e);
+    },
+    raw(obj){ if(this.socket?.readyState===1) this.socket.send(JSON.stringify(obj)); },
+
+    onMessage(e){
+      let d; try{ d=JSON.parse(e.data); }catch(_){ return; }
+      switch(d.type){
+        case 'self':
+          this.me = {...this.me, id:d.identity.id, name:d.identity.name, color:d.identity.color};
+          this.messages.forEach(m=>{ m.mine = m.authorId===this.me.id; });
+          break;
+        case 'history':
+          this.messages = (d.messages||[]).map(ev=>this.fromServer(ev));
+          this._read = new Set(); this.loading=false; this.persist();
+          this.$nextTick(()=>{ this.scrollToBottom(true); this.markRead(); });
+          break;
+        case 'message':   this.handleMessage(d.message); break;
+        case 'status':    this.handleStatus(d); break;
+        case 'read':      this.handleRead(d); break;
+        case 'played':    { const m=this.messages.find(x=>x.id===d.id); if(m&&m.mine) m.played=true; break; }
+        case 'typing':    if(d.author.id!==this.me.id) this.setTyper(d.author); break;
+        case 'typing_stop': if(d.author.id!==this.me.id) this.clearTyper(d.author.id); break;
+        case 'recording': if(d.author.id!==this.me.id){ d.active ? this.setRecorder(d.author) : this.clearRecorder(d.author.id); } break;
+        case 'reaction':  { const m=this.messages.find(x=>x.id===d.id); if(m){ m.reactions=d.reactions||{}; this.persist(); } break; }
+        case 'edit':      { const m=this.messages.find(x=>x.id===d.id); if(m){ m.text=d.text; m.edited=true; this.persist(); } break; }
+        case 'delete':    { const m=this.messages.find(x=>x.id===d.id); if(m){ m.text=''; m.image=null; m.deleted=true; m.reactions={}; this.persist(); } break; }
+        case 'presence':  this.handlePresence(d); break;
+        case 'group.deleted':
+          this.groups = this.groups.filter(g=>g.slug!==d.slug);
+          if(d.slug===this.room){ this.showToast('This group was deleted'); setTimeout(()=>location.href='/chat/', 900); }
+          break;
+        case 'group.updated':
+          this.loadGroups(); if(d.group && d.group.slug===this.room) this.loadCurrentGroup();
+          break;
+        case 'group.created': this.loadGroups(); break;
+      }
+    },
+
+    /* map a server message event to the local render shape */
+    fromServer(ev){
+      return {
+        id:ev.id, client_id:ev.client_id||'', authorId:ev.authorId, author:ev.author, color:ev.color,
+        kind:ev.kind||'text', text:ev.text||'', image:ev.image||null, audio:ev.audio||null,
+        duration:ev.duration_ms||0, waveform:ev.waveform||[],
+        replyTo: ev.reply_to ? {author:ev.reply_to.author, text:ev.reply_to.text} : null,
+        edited:!!ev.edited, deleted:!!ev.deleted, ts:ev.ts||Date.now(), reactions:ev.reactions||{},
+        mine: ev.authorId===this.me.id, status: ev.authorId===this.me.id ? 'read' : '',
+      };
+    },
+    handleMessage(ev){
+      const existing = this.messages.find(m => (ev.client_id && m.client_id===ev.client_id) || m.id===ev.id);
+      if(existing){                       // our optimistic echo -> confirm with server id + media
+        const oldId = existing.id;
+        existing.id = ev.id; existing.ts = ev.ts; existing.reactions = ev.reactions||{};
+        if(ev.kind==='voice'){ existing.kind='voice'; existing.audio=ev.audio||existing.audio; existing.duration=ev.duration_ms||existing.duration; if(ev.waveform&&ev.waveform.length) existing.waveform=ev.waveform; }
+        if(ev.image) existing.image=ev.image;
+        if(this.players[oldId]){ this.players[ev.id]=this.players[oldId]; } // keep player state across id swap
+        if(existing.status==='sending') existing.status='sent';
+      } else {
+        const m = this.fromServer(ev); this.messages.push(m);
+        if(!m.mine){ if(!this.atBottom) this.unread++; this.pushNotif(ev); if(this.sound) this.beep(); }
+      }
+      this.clearTyper(ev.authorId); this.clearRecorder(ev.authorId); this.persist();
+      this.$nextTick(()=>{ this.scrollToBottom(); this.markRead(); });
+    },
+    handleStatus(d){ const m=this.messages.find(x=> x.id===d.id || (d.client_id && x.client_id===d.client_id)); if(m && m.status!=='read') m.status=d.status; },
+    handleRead(d){ (d.ids||[]).forEach(id=>{ const m=this.messages.find(x=>x.id===id); if(m && m.mine) m.status='read'; }); },
+    handlePresence(d){
+      if(d.state==='snapshot'){ this.members = (d.members||[]).slice(); if(!this.members.some(m=>m.id===this.me.id)) this.members.unshift(this.mini()); }
+      else if(d.state==='join'){ if(!this.members.some(m=>m.id===d.member.id)) this.members.push(d.member); }
+      else if(d.state==='leave'){ this.members = this.members.filter(m=>m.id!==d.member.id); }
+    },
+    markRead(){
+      if(!this.atBottom || this.socket?.readyState!==1) return;
+      const ids = this.messages.filter(m=>!m.mine && m.id && !this._read.has(m.id)).map(m=>m.id);
+      if(ids.length){ ids.forEach(id=>this._read.add(id)); this.raw({type:'read', ids}); }
+    },
+
+    /* ---------- sending ---------- */
+    canSend(){ return (this.draft.trim().length>0 || this.attachment) && this.connected; },
+    send(){
+      if(this.editing){ return this.commitEdit(); }
+      if(!this.canSend()) return;
+      const cid = crypto.randomUUID();
+      // optimistic bubble (clock tick) — reconciled when the server echoes it back
+      this.messages.push({ id:cid, client_id:cid, authorId:this.me.id, author:this.me.name, color:this.me.color,
+        text:this.draft.trim(), image:this.attachment||null, ts:Date.now(),
+        replyTo:this.reply?{author:this.reply.mine?'You':this.reply.author,text:this.reply.text||'Photo'}:null,
+        reactions:{}, mine:true, status:'sending' });
+      this.raw({ type:'message', client_id:cid, text:this.draft.trim(),
+        image:this.attachment||'', reply_to_id:this.reply?this.reply.id:null });
+      this.stopTyping();
+      this.persist(); this.draft=''; this.attachment=null; this.reply=null;
+      this.$nextTick(()=>{ this.autogrow(); this.scrollToBottom(true); });
+    },
+    onKey(e){ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); this.send(); } },
+    /* typing: debounced start, keep-alive re-ping, immediate stop */
+    ping(){
+      const now=Date.now();
+      if(!this.draft.trim()){ this.stopTyping(); return; }
+      if(now-this._lastTyping > 1800){ this.raw({type:'typing'}); this._lastTyping=now; this._typingSent=true; }
+      clearTimeout(this._typingTimer);
+      this._typingTimer=setTimeout(()=>this.stopTyping(), 2200);
+    },
+    stopTyping(){ if(this._typingSent){ this.raw({type:'typing_stop'}); this._typingSent=false; } this._lastTyping=0; clearTimeout(this._typingTimer); },
+    autogrow(){ const ta=this.$refs.ta; ta.style.height='auto'; ta.style.height=Math.min(ta.scrollHeight,160)+'px'; },
+
+    /* ---------- typing / recording ---------- */
+    setTyper(a){ if(!this.typers.some(t=>t.id===a.id)) this.typers.push(a); clearTimeout(this._typersTimers[a.id]); this._typersTimers[a.id]=setTimeout(()=>this.clearTyper(a.id),2500); },
+    clearTyper(id){ this.typers=this.typers.filter(t=>t.id!==id); },
+    typingText(){ const n=this.typers.map(t=>t.name); if(n.length===1) return `${n[0]} is typing`; if(n.length===2) return `${n[0]} and ${n[1]} are typing`; if(n.length===3) return `3 people are typing`; return 'Several people are typing'; },
+    setRecorder(a){ if(!this.recorders.some(r=>r.id===a.id)) this.recorders.push(a); clearTimeout(this._recTimers[a.id]); this._recTimers[a.id]=setTimeout(()=>this.clearRecorder(a.id),4000); },
+    clearRecorder(id){ this.recorders=this.recorders.filter(r=>r.id!==id); },
+    recordingText(){ const n=this.recorders.map(r=>r.name); if(n.length===1) return `${n[0]} is recording a voice message`; if(n.length===2) return `${n[0]} and ${n[1]} are recording`; if(n.length===3) return `3 people are recording`; return 'Several people are recording'; },
+    /* Telegram-style delivery ticks for own messages */
+    ticks(status){
+      const clock='<svg class="w-3.5 h-3.5 inline text-white/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+      const one='<svg class="w-4 h-4 inline text-white/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+      const two=(c)=>`<svg class="w-4 h-4 inline ${c}" viewBox="0 0 28 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-4-4"/><path d="M24 6 13 17l-1-1"/></svg>`;
+      if(status==='sending') return clock;
+      if(status==='sent') return one;
+      if(status==='read') return two('text-sky-300');
+      return two('text-white/70'); // delivered
+    },
+
+    /* ---------- reactions / edit / delete (server-authoritative) ---------- */
+    react(id,emoji){ const m=this.messages.find(x=>x.id===id); if(m){ if(!m.reactions) m.reactions={}; m.reactions[emoji]=(m.reactions[emoji]||0)+1; } this.raw({type:'reaction',id,emoji}); this.menuFor=null; },
+    startEdit(item){ this.editing=item; this.reply=null; this.draft=item.text; this.$nextTick(()=>{this.autogrow();this.$refs.ta.focus();}); },
+    cancelEdit(){ this.editing=null; this.draft=''; this.$nextTick(()=>this.autogrow()); },
+    commitEdit(){ const m=this.messages.find(x=>x.id===this.editing.id); if(m){ m.text=this.draft.trim(); m.edited=true; this.raw({type:'edit',id:m.id,text:m.text}); this.persist(); } this.cancelEdit(); },
+    del(item){ const m=this.messages.find(x=>x.id===item.id); if(m){ m.text=''; m.image=null; m.deleted=true; m.reactions={}; } this.raw({type:'delete',id:item.id}); this.persist(); this.showToast('Message deleted'); },
+    copyMsg(item){ navigator.clipboard?.writeText(item.text||''); this.showToast('Copied to clipboard'); },
+    forward(item){ this.draft = (item.text||'') ; this.$refs.ta.focus(); this.showToast('Forwarded to composer'); },
+
+    /* ---------- files ---------- */
+    onFile(e){ const f=e.target.files[0]; if(f) this.readImage(f); e.target.value=''; },
+    onDrop(e){ this.dragging=false; const f=e.dataTransfer.files[0]; if(f&&f.type.startsWith('image/')) this.readImage(f); },
+    readImage(f){ if(f.size>1.5*1024*1024){ this.showToast('Image too large (max 1.5MB)'); return; } const r=new FileReader(); r.onload=()=>this.attachment=r.result; r.readAsDataURL(f); },
+
+    /* ---------- voice recording (real MediaRecorder) ---------- */
+    token(){ return localStorage.getItem('pulse.access')||''; },
+    canVoice(){ return this.authed; },
+    async startRecord(e){
+      if(this.rec.active) return;
+      if(!this.canVoice()){ this.showToast('Sign in to send voice messages'); return; }
+      if(!navigator.mediaDevices?.getUserMedia){ this.showToast('Recording not supported in this browser'); return; }
+      try{ this._stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+      catch(_){ this.showToast('Microphone permission denied'); return; }
+      this._recStartX = e?.clientX||0; this._recStartY = e?.clientY||0;
+      this._chunks=[]; Object.assign(this.rec,{active:true,locked:false,cancel:false,ms:0,bars:[]});
+      // live level metering via WebAudio
+      this._actx = new (window.AudioContext||window.webkitAudioContext)();
+      const src=this._actx.createMediaStreamSource(this._stream);
+      this._analyser=this._actx.createAnalyser(); this._analyser.fftSize=1024; src.connect(this._analyser);
+      const buf=new Uint8Array(this._analyser.fftSize);
+      const sample=()=>{ if(!this.rec.active) return; this._analyser.getByteTimeDomainData(buf);
+        let sum=0; for(let i=0;i<buf.length;i++){ const v=(buf[i]-128)/128; sum+=v*v; }
+        const level=Math.min(100, Math.round(Math.sqrt(sum/buf.length)*220));
+        this.rec.bars.push(level); if(this.rec.bars.length>48) this.rec.bars.shift();
+        this._recRAF=setTimeout(sample,110); };
+      sample();
+      this._mr = new MediaRecorder(this._stream, this._pickMime());
+      this._mr.ondataavailable=(ev)=>{ if(ev.data.size) this._chunks.push(ev.data); };
+      this._mr.start(200);
+      this._recTick=setInterval(()=>{ this.rec.ms+=100; if(this.rec.ms>=5*60*1000) this.finishRecord(true); },100);
+      this.raw({type:'recording',active:true});
+      window.addEventListener('pointermove', this._pm=(ev)=>this.recMove(ev));
+      window.addEventListener('pointerup',   this._pu=()=>this.recUp());
+    },
+    _pickMime(){ for(const m of ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg']){ if(window.MediaRecorder&&MediaRecorder.isTypeSupported(m)) return {mimeType:m}; } return {}; },
+    recMove(ev){ if(!this.rec.active||this.rec.locked) return;
+      const dx=ev.clientX-this._recStartX, dy=ev.clientY-this._recStartY;
+      this.rec.cancel = dx < -80;
+      if(dy < -70){ this.rec.locked=true; } },
+    recUp(){ if(!this.rec.active||this.rec.locked) return; this.rec.cancel ? this.cancelRecord() : this.finishRecord(true); },
+    _teardownRec(){
+      clearInterval(this._recTick); clearTimeout(this._recRAF);
+      window.removeEventListener('pointermove', this._pm); window.removeEventListener('pointerup', this._pu);
+      try{ this._stream?.getTracks().forEach(t=>t.stop()); this._actx?.close(); }catch(_){}
+      this.raw({type:'recording',active:false});
+    },
+    cancelRecord(){ if(!this.rec.active) return; this.rec.active=false; try{ this._mr?.stop(); }catch(_){}
+      this._teardownRec(); this.showToast('Recording cancelled'); },
+    finishRecord(send){
+      if(!this.rec.active) return;
+      const ms=this.rec.ms, bars=this.rec.bars.slice(); this.rec.active=false;
+      const mr=this._mr;
+      mr.onstop=()=>{ this._teardownRec();
+        if(!send || ms<600){ if(ms<600) this.showToast('Hold to record'); return; }
+        const blob=new Blob(this._chunks,{type:(mr.mimeType||'audio/webm').split(';')[0]});
+        this.sendVoice(blob, ms, this._normBars(bars)); };
+      try{ mr.stop(); }catch(_){ this._teardownRec(); }
+    },
+    _normBars(bars){ // downsample to ~40 bars, 0..100
+      if(!bars.length) return [];
+      const N=40, out=[], step=bars.length/N;
+      for(let i=0;i<N;i++){ out.push(Math.max(6, Math.min(100, Math.round(bars[Math.floor(i*step)]||0)))); }
+      return out;
+    },
+    sendVoice(blob, ms, bars){
+      const cid=crypto.randomUUID(); const url=URL.createObjectURL(blob);
+      this.messages.push({ id:cid, client_id:cid, authorId:this.me.id, author:this.me.name, color:this.me.color,
+        kind:'voice', text:'', audio:url, duration:ms, waveform:bars, ts:Date.now(),
+        replyTo:this.reply?{author:this.reply.mine?'You':this.reply.author,text:this.reply.text||'Voice'}:null,
+        reactions:{}, mine:true, status:'sending' });
+      const replyId=this.reply?this.reply.id:null; this.reply=null;
+      this.$nextTick(()=>this.scrollToBottom(true));
+      const fd=new FormData();
+      fd.append('room', this.room); fd.append('audio', blob, 'voice.webm');
+      fd.append('duration_ms', ms); fd.append('client_id', cid); fd.append('waveform', JSON.stringify(bars));
+      if(replyId) fd.append('reply_to_id', replyId);
+      const xhr=new XMLHttpRequest(); xhr.open('POST','/api/v1/voice/');
+      xhr.setRequestHeader('Authorization','Bearer '+this.token());
+      xhr.upload.onprogress=(e)=>{ if(e.lengthComputable) this.uploadPct=Math.round(e.loaded/e.total*100); };
+      xhr.onload=()=>{ this.uploadPct=0; if(xhr.status>=400){ const m=this.messages.find(x=>x.id===cid); if(m) m.status='failed'; this.showToast('Voice upload failed'); } };
+      xhr.onerror=()=>{ this.uploadPct=0; const m=this.messages.find(x=>x.id===cid); if(m) m.status='failed'; this.showToast('Voice upload failed'); };
+      xhr.send(fd);
+    },
+    recTime(){ const s=Math.floor(this.rec.ms/1000); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; },
+
+    /* ---------- voice playback ---------- */
+    player(id){ if(!this.players[id]) this.players[id]={playing:false,progress:0,speed:1}; return this.players[id]; },
+    audioEl(item){
+      if(!this._audio[item.id]){
+        const a=new Audio(item.audio); a.preload='metadata';
+        a.ontimeupdate=()=>{ const p=this.player(item.id); if(a.duration) p.progress=a.currentTime/a.duration; };
+        a.onended=()=>{ const p=this.player(item.id); p.playing=false; p.progress=0; };
+        this._audio[item.id]=a;
+      }
+      return this._audio[item.id];
+    },
+    toggleVoice(item){
+      const a=this.audioEl(item), p=this.player(item.id);
+      if(p.playing){ a.pause(); p.playing=false; return; }
+      Object.entries(this._audio).forEach(([id,au])=>{ if(id!==item.id){ au.pause(); if(this.players[id]) this.players[id].playing=false; } });
+      a.playbackRate=p.speed; a.play().then(()=>{ p.playing=true; if(!item.mine && !this._played?.has(item.id)){ (this._played=this._played||new Set()).add(item.id); this.raw({type:'played',id:item.id}); } }).catch(()=>this.showToast('Cannot play audio'));
+    },
+    seekVoice(item, e){ const a=this.audioEl(item); const r=e.currentTarget.getBoundingClientRect(); const f=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)); if(a.duration){ a.currentTime=f*a.duration; this.player(item.id).progress=f; } },
+    cycleSpeed(item){ const p=this.player(item.id); p.speed = p.speed===1?1.5:p.speed===1.5?2:1; const a=this._audio[item.id]; if(a) a.playbackRate=p.speed; },
+    voiceDur(item){ const ms=item.duration||item.duration_ms||0; const s=Math.round(ms/1000); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; },
+    bars(item){ return (item.waveform && item.waveform.length) ? item.waveform : this._defBars; },
+
+    /* ================= WebRTC CALLS ================= */
+    _rtcConfig(){ return {iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]}; },
+    initCallSocket(){
+      const token=this.token(); if(!token) return;   // calls require auth
+      const proto=location.protocol==='https:'?'wss':'ws';
+      this._callSock=new WebSocket(`${proto}://${location.host}/ws/call/?token=${encodeURIComponent(token)}`);
+      this._callSock.onmessage=(e)=>{ try{ this.onSignal(JSON.parse(e.data)); }catch(_){} };
+      this._callSock.onclose=()=>{ this._callSock=null; setTimeout(()=>this.initCallSocket(), 2500); };
+    },
+    callSend(obj){ if(this._callSock?.readyState===1) this._callSock.send(JSON.stringify(obj)); },
+    callTargets(){ return this.members.filter(m=>m.id!==this.me.id && m.authenticated); },
+
+    async startCall(type){
+      if(this.call.active||this.call.incoming) return;
+      if(!this.token()){ this.showToast('Sign in to start a call'); return; }
+      const targets=this.callTargets();
+      if(!targets.length){ this.showToast('No signed-in member here to call'); return; }
+      if(targets.length>1) this.showToast('Calling '+targets[0].name);
+      const peer=targets[0];
+      Object.assign(this.call,{active:true,incoming:false,type,status:'calling',withId:peer.id,withName:peer.name,muted:false,camOff:false,seconds:0,callId:null});
+      try{ this._localStream=await navigator.mediaDevices.getUserMedia({audio:true, video:type==='video'}); }
+      catch(_){ this.showToast('Camera/microphone permission denied'); return this.endCleanup(); }
+      this._attachLocal();
+      this._pc=this._newPeer(peer.id);
+      this._localStream.getTracks().forEach(t=>this._pc.addTrack(t,this._localStream));
+      const offer=await this._pc.createOffer(); await this._pc.setLocalDescription(offer);
+      this.callSend({type:'call.offer', to:peer.id, call_type:type, sdp:offer});
+    },
+
+    _newPeer(peerId){
+      const pc=new RTCPeerConnection(this._rtcConfig());
+      pc.onicecandidate=(e)=>{ if(e.candidate) this.callSend({type:'call.ice_candidate', to:peerId, call_id:this.call.callId, candidate:e.candidate}); };
+      pc.ontrack=(e)=>{ this._remoteStream=e.streams[0]; this.$nextTick(()=>this._attachRemote()); };
+      pc.onconnectionstatechange=()=>{ if(['failed','closed'].includes(pc.connectionState)) this.hangup(); };
+      return pc;
+    },
+
+    async onSignal(d){
+      switch(d.type){
+        case 'call.incoming':
+          if(this.call.active){ this.callSend({type:'call.reject', to:d.from.id, call_id:d.call_id}); return; }
+          this._incomingOffer=d.sdp; this._iceQueue=[];
+          Object.assign(this.call,{incoming:true,active:false,type:d.call_type,withId:d.from.id,withName:d.from.name,callId:d.call_id});
+          this.beep();
+          break;
+        case 'call.answer':
+          this.call.status='ongoing'; this.startCallTimer();
+          try{ await this._pc.setRemoteDescription(d.sdp); await this._drainIce(); }catch(_){ }
+          break;
+        case 'call.ice_candidate':
+          if(this._pc && this._pc.remoteDescription && this._pc.remoteDescription.type){ try{ await this._pc.addIceCandidate(d.candidate); }catch(_){} }
+          else this._iceQueue.push(d.candidate);
+          break;
+        case 'call.rejected':   this.showToast(this.call.withName+' declined'); this.endCleanup(); break;
+        case 'call.ended':      this.showToast('Call ended'); this.endCleanup(); break;
+        case 'call.busy':       this.showToast(this.call.withName+' is busy'); this.endCleanup(); break;
+        case 'call.unavailable':this.showToast(this.call.withName+' is unavailable'); this.endCleanup(); break;
+      }
+    },
+
+    async acceptCall(){
+      const type=this.call.type;
+      Object.assign(this.call,{incoming:false,active:true,status:'connecting'});
+      try{ this._localStream=await navigator.mediaDevices.getUserMedia({audio:true, video:type==='video'}); }
+      catch(_){ this.showToast('Camera/microphone permission denied'); return this.rejectCall(); }
+      this._attachLocal();
+      this._pc=this._newPeer(this.call.withId);
+      this._localStream.getTracks().forEach(t=>this._pc.addTrack(t,this._localStream));
+      try{
+        await this._pc.setRemoteDescription(this._incomingOffer);
+        await this._drainIce();
+        const answer=await this._pc.createAnswer(); await this._pc.setLocalDescription(answer);
+        this.callSend({type:'call.answer', to:this.call.withId, call_id:this.call.callId, sdp:answer});
+        this.call.status='ongoing'; this.startCallTimer();
+      }catch(_){ this.showToast('Could not connect the call'); this.endCleanup(); }
+    },
+    async _drainIce(){ for(const c of this._iceQueue){ try{ await this._pc.addIceCandidate(c); }catch(_){} } this._iceQueue=[]; },
+
+    rejectCall(){ this.callSend({type:'call.reject', to:this.call.withId, call_id:this.call.callId}); this.endCleanup(); },
+    hangup(){ if(this.call.withId) this.callSend({type:'call.end', to:this.call.withId, call_id:this.call.callId}); this.endCleanup(); },
+    endCleanup(){
+      clearInterval(this._callTimer);
+      try{ this._pc?.close(); }catch(_){} this._pc=null;
+      try{ this._localStream?.getTracks().forEach(t=>t.stop()); }catch(_){} this._localStream=null; this._remoteStream=null;
+      this._incomingOffer=null; this._iceQueue=[];
+      this.call={active:false,incoming:false,type:'voice',status:'',withName:'',withId:'',muted:false,camOff:false,seconds:0,callId:null,fullscreen:false};
+    },
+    startCallTimer(){ clearInterval(this._callTimer); this.call.seconds=0; this._callTimer=setInterval(()=>this.call.seconds++,1000); },
+    callTime(){ const s=this.call.seconds; return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; },
+    toggleMute(){ const t=this._localStream?.getAudioTracks?.()[0]; if(t){ t.enabled=!t.enabled; this.call.muted=!t.enabled; } },
+    toggleCam(){ const t=this._localStream?.getVideoTracks?.()[0]; if(t){ t.enabled=!t.enabled; this.call.camOff=!t.enabled; } },
+    _attachLocal(){ this.$nextTick(()=>{ if(this.$refs.localMedia){ this.$refs.localMedia.srcObject=this._localStream; this.$refs.localMedia.muted=true; } }); },
+    _attachRemote(){ if(this.$refs.remoteMedia && this._remoteStream){ this.$refs.remoteMedia.srcObject=this._remoteStream; } },
+
+    /* ---------- notifications ---------- */
+    pushNotif(d){ this.unread++; this.notifications.unshift({id:crypto.randomUUID(),who:d.author,color:d.color,html:`<b>${this.esc(d.author)}</b> sent a message`,time:'just now'}); this.notifications=this.notifications.slice(0,20); },
+    beep(){ try{ const a=new(window.AudioContext||window.webkitAudioContext)(); const o=a.createOscillator(),g=a.createGain(); o.connect(g);g.connect(a.destination); o.frequency.value=660;g.gain.value=.05; o.start();o.stop(a.currentTime+.08);}catch(_){} },
+
+    /* ---------- rendering helpers ---------- */
+    get rendered(){
+      const out=[]; let lastDay=null, lastAuthor=null, lastTs=0, unreadShown=false;
+      this.messages.forEach((m,i)=>{
+        const day=this.dayLabel(m.ts);
+        if(day!==lastDay){ out.push({type:'date',label:day,key:'d'+m.ts}); lastDay=day; lastAuthor=null; }
+        const head = m.authorId!==lastAuthor || (m.ts-lastTs)>5*60*1000;
+        if(m.deleted){ out.push({type:'msg',...m,head,text:'',deleted:true,time:this.timeLabel(m.ts),key:m.id}); }
+        else out.push({type:'msg',...m,head,time:this.timeLabel(m.ts),key:m.id});
+        lastAuthor=m.authorId; lastTs=m.ts;
+      });
+      return out;
+    },
+    format(t){ if(!t) return '<span class="italic opacity-50">message deleted</span>'; let s=this.esc(t);
+      s=s.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\*(.+?)\*/g,'<i>$1</i>').replace(/`(.+?)`/g,'<code class="px-1 rounded bg-black/30 text-[12px]">$1</code>');
+      s=s.replace(/(https?:\/\/[^\s]+)/g,'<a href="$1" target="_blank" class="underline text-brand-400">$1</a>');
+      s=s.replace(/@(\w+)/g,'<span class="text-brand-400 font-medium">@$1</span>'); return s; },
+    esc(t){ return (t||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); },
+    initials(n){ if(!n) return '?'; return n.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase(); },
+    timeLabel(ts){ return new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); },
+    dayLabel(ts){ const d=new Date(ts),n=new Date(); const same=(a,b)=>a.toDateString()===b.toDateString(); if(same(d,n)) return 'Today'; const y=new Date(n);y.setDate(y.getDate()-1); if(same(d,y)) return 'Yesterday'; return d.toLocaleDateString([], {weekday:'long',month:'short',day:'numeric'}); },
+
+    chatRow(c){ const active=c.slug===this.room; const sub=(c.members||0)+' member'+((c.members===1)?'':'s'); return `
+      <div class="nav-item flex items-center gap-3 px-3 py-2 mx-1 rounded-xl ${active?'bg-brand/15':'hover:bg-white/[.04]'}">
+        <div class="relative flex-shrink-0"><div class="w-10 h-10 rounded-xl grid place-items-center text-sm font-bold text-white" style="background:${c.color}">${this.initials(c.name)}</div>
+        ${active?'<span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-ok online-ring"></span>':''}</div>
+        ${this.ui.sidebar?`<div class="min-w-0 flex-1"><div class="flex items-center justify-between gap-2"><p class="text-sm font-semibold truncate ${active?'text-brand-400':''}">#${this.esc(c.name)}</p></div><p class="text-xs text-ink2 truncate">${sub}</p></div>`:''}
+      </div>`; },
+    headerIcon(n){ const p={search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',phone:'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>',video:'<path d="m23 7-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>'}; return `<svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p[n]}</svg>`; },
+
+    /* ---------- scroll ---------- */
+    onScroll(e){ const el=e.target; this.atBottom = el.scrollHeight-el.scrollTop-el.clientHeight < 80; if(this.atBottom){ this.unread=0; this.markRead(); } },
+    scrollToBottom(force){ const el=document.getElementById('scroll'); if(!el) return; if(force||this.atBottom){ el.scrollTop=el.scrollHeight; this.atBottom=true; } },
+
+    /* ---------- persistence ---------- */
+    persist(){ try{ localStorage.setItem('pulse.msgs.'+this.room, JSON.stringify(this.messages.slice(-100))); }catch(_){} },
+    loadCache(){ try{ const c=JSON.parse(localStorage.getItem('pulse.msgs.'+this.room)||'[]'); this.messages=c.map(m=>({...m,mine:m.authorId===this.me.id})); }catch(_){} },
+    /* ---------- GROUPS: real DB entities via the API (no auto-creation) ---------- */
+    async api(path, opts={}){
+      opts.headers = Object.assign({'Content-Type':'application/json'}, opts.headers||{}, {Authorization:'Bearer '+this.token()});
+      let r = await fetch(path, opts);
+      if(r.status===401 && await this.refreshToken()){ opts.headers.Authorization='Bearer '+this.token(); r = await fetch(path, opts); }
+      return r;
+    },
+    async loadGroups(){
+      const r = await this.api('/api/v1/groups/'); if(!r.ok) return;
+      this.groups = (await r.json()).data.map(g=>({slug:g.slug,name:g.name,members:g.member_count,visibility:g.visibility,ownerId:g.owner?.id,color:this.colorFor(g.slug)}));
+    },
+    async loadCurrentGroup(){
+      const r = await this.api('/api/v1/groups/'+encodeURIComponent(this.room)+'/');
+      this.currentGroup = r.ok ? (await r.json()).data : null;   // null = ad-hoc room, not a real group
+    },
+    isOwner(){ return this.currentGroup && this.currentGroup.owner && this.currentGroup.owner.id===this.me.id; },
+    async createGroup(){
+      this.formError=''; this.existingSlug='';
+      const name=(this.form.name||'').trim();
+      if(name.length<3){ this.formError='Group name must be at least 3 characters.'; return; }
+      const r = await this.api('/api/v1/groups/', {method:'POST', body:JSON.stringify({name, description:this.form.desc||'', visibility:(this.form.vis||'Public').toLowerCase()})});
+      const d = await r.json().catch(()=>({}));
+      if(r.status===201){ location.href='/chat/'+d.data.slug+'/'; return; }
+      if(r.status===409){ this.formError='This group already exists.'; this.existingSlug=d.error?.details?.slug||''; return; }
+      this.formError = d.error?.message || 'Could not create the group.';
+    },
+    openExisting(){ if(this.existingSlug) location.href='/chat/'+this.existingSlug+'/'; },
+    async loadDiscover(){
+      const r = await this.api('/api/v1/groups/discover/?search='+encodeURIComponent(this.joinQuery||''));
+      if(r.ok) this.discoverList = (await r.json()).data.map(g=>({slug:g.slug,name:g.name,members:g.member_count,desc:g.description||'',color:this.colorFor(g.slug)}));
+    },
+    async joinGroup(slug){
+      const r = await this.api('/api/v1/groups/'+slug+'/join/', {method:'POST', body:'{}'});
+      const d = await r.json().catch(()=>({}));
+      if(r.ok){ if(d.data?.status==='requested'){ this.showToast('Request sent to join'); } else { location.href='/chat/'+slug+'/'; } }
+      else { this.showToast(d.error?.message || 'Could not join this group.'); }
+    },
+    askDelete(){ if(this.isOwner()) this.ui.confirmDelete=true; },
+    async doDelete(){
+      const slug=this.room;
+      const r = await this.api('/api/v1/groups/'+slug+'/', {method:'DELETE'});
+      if(r.ok){ this.ui.confirmDelete=false; this.groups=this.groups.filter(g=>g.slug!==slug); this.showToast('Group deleted'); setTimeout(()=>location.href='/chat/', 700); }
+      else { const d=await r.json().catch(()=>({})); this.ui.confirmDelete=false; this.showToast(d.error?.message||'Could not delete the group.'); }
+    },
+    searchResults(){ const q=this.searchQuery.toLowerCase().trim(); if(!q) return []; return this.messages.filter(m=>m.text&&m.text.toLowerCase().includes(q)).slice(-20).reverse().map(m=>({...m,time:this.timeLabel(m.ts)})); },
+    get sharedMedia(){ return this.messages.filter(m=>m.image).map(m=>m.image).slice(-9); },
+
+    /* ---------- misc ui ---------- */
+    toggleTheme(){ this.dark=!this.dark; document.documentElement.classList.toggle('dark',this.dark); },
+    showToast(t){ this.toast=t; clearTimeout(this._toast); this._toast=setTimeout(()=>this.toast='',1800); },
+    closeAll(){ Object.keys(this.ui).forEach(k=>{ if(typeof this.ui[k]==='boolean' && !['sidebar','right'].includes(k)) this.ui[k]=false; }); this.menuFor=null; this.reply=null; this.cancelEdit(); },
+  };
+}
+</script>
 </body>
 </html>

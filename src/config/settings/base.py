@@ -35,12 +35,18 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # third-party apps
+    'channels',
     'corsheaders',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'django_filters',
     'drf_spectacular',
 
     # own apps
+    'apps.common',
+    'apps.accounts',
+    'apps.groups',
+    'apps.messaging',
     'apps.utils',
     'apps.users',
     'apps.chat',
@@ -82,11 +88,27 @@ ASGI_APPLICATION = 'config.asgi.application'
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
 
 
+# Tolerate empty (present-but-blank) env vars, which are common in .env files.
+REDIS_HOST = env("REDIS_HOST", default="").strip() or "127.0.0.1"
+_redis_port = env("REDIS_PORT", default="").strip()
+REDIS_PORT = int(_redis_port) if _redis_port.isdigit() else 6379
+
+# Redis-backed channel layer: required for cross-process fan-out (multiple
+# Daphne/Uvicorn workers) and the ephemeral presence/typing state below.
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer",
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [(REDIS_HOST, REDIS_PORT)],
+            "capacity": 1500,
+            "expiry": 10,
+        },
     },
 }
+
+# Dedicated Redis connection (db 2) for ephemeral realtime state — presence
+# sets, last-seen, typing/recording throttles — kept out of the Celery broker db.
+REDIS_REALTIME_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/2"
 
 
 
@@ -122,9 +144,25 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'login': '5/day',
+        'voice': '120/hour',
+        'register': '10/hour',
+        'otp_resend': '5/hour',
     },
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'EXCEPTION_HANDLER': 'apps.common.exceptions.custom_exception_handler',
     # 'UNAUTHENTICATED_USER': 'users.models.AnonymousUser',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Realtime Messaging Platform API',
+    'DESCRIPTION': (
+        'Telegram/Discord/Slack-style real-time messaging platform: groups, '
+        'channels, direct messages, presence, notifications and media.'
+    ),
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': r'/api/v[0-9]+',
 }
 
 
@@ -173,15 +211,47 @@ else:
 
 
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = env("EMAIL_HOST")
-EMAIL_HOST_PASSWORD = env("EMAIL_PASSWORD") # Generate in Gmail
+EMAIL_BACKEND = env("EMAIL_BACKEND", default='django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = env("EMAIL_SMTP_HOST", default='smtp.gmail.com')
+EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
+EMAIL_HOST_USER = env("EMAIL_HOST", default="")            # the Gmail sender address
+EMAIL_HOST_PASSWORD = env("EMAIL_PASSWORD", default="")    # Gmail App Password (16 chars)
+# A hung SMTP handshake must never block a request worker indefinitely.
+EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT", default=20)
+# Gmail rejects a From that isn't the authenticated account, so default to it.
+DEFAULT_FROM_EMAIL = env(
+    "DEFAULT_FROM_EMAIL",
+    default=(f"Pulse <{EMAIL_HOST_USER}>" if EMAIL_HOST_USER else "webmaster@localhost"),
+)
+SERVER_EMAIL = EMAIL_HOST_USER or "root@localhost"
 
+# One-time-password policy.
+OTP_TTL_MINUTES = env.int("OTP_TTL_MINUTES", default=10)
+# Send OTP emails synchronously in DEBUG (instant, no worker required) and via
+# Celery in production. Override explicitly with EMAIL_USE_CELERY if needed.
+EMAIL_USE_CELERY = env.bool("EMAIL_USE_CELERY", default=not DEBUG)
 
 BASE_URL_LINK = env("BASE_URL_LINK")
+
+# ---- Logging: the email pipeline must never fail silently ----
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {"format": "[{asctime}] {levelname} {name}: {message}", "style": "{"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "verbose"},
+    },
+    "loggers": {
+        "email": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "apps": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "api": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "django.request": {"handlers": ["console"], "level": "ERROR", "propagate": False},
+    },
+}
 
 
 # CELERY SOZLAMALARI

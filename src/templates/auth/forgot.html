@@ -1,0 +1,119 @@
+{% extends "auth/base.html" %}
+{% block title %}Reset password · Pulse{% endblock %}
+{% block topright %}<a href="/login/" class="text-brand-400 font-semibold hover:underline">Back to sign in</a>{% endblock %}
+
+{% block card %}
+<div x-data="forgotForm()">
+  <!-- Progress -->
+  <div class="flex items-center gap-2 mb-7">
+    <template x-for="s in 3" :key="s">
+      <div class="h-1.5 flex-1 rounded-full transition-all" :class="s<=step ? 'bg-brand' : 'bg-white/10'"></div>
+    </template>
+  </div>
+
+  <!-- STEP 1 · email -->
+  <div x-show="step===1" x-transition>
+    <h1 class="text-2xl font-extrabold tracking-tight">Reset your password</h1>
+    <p class="text-ink2 mt-1 text-sm">Enter your account email and we'll send a reset code.</p>
+    <form @submit.prevent="sendCode()" class="mt-7 space-y-4" novalidate>
+      <div class="field flex items-center gap-2 px-3.5 h-12 rounded-xl bg-white/[.04] border hairline">
+        <svg class="w-4 h-4 text-ink2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+        <input x-model="email" type="email" autocomplete="email" placeholder="you@company.com" class="flex-1 bg-transparent outline-none text-sm"/>
+      </div>
+      <p x-show="error" x-text="error" class="text-sm text-danger"></p>
+      <button :disabled="loading" class="btn-press w-full h-12 rounded-xl bg-brand hover:bg-brand-600 text-white font-semibold shadow-glow disabled:opacity-60 flex items-center justify-center gap-2">
+        <svg x-show="loading" class="w-4 h-4 spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M21 12a9 9 0 1 1-6.2-8.5" stroke-linecap="round"/></svg>
+        <span x-text="loading?'Sending…':'Send reset code'"></span>
+      </button>
+    </form>
+  </div>
+
+  <!-- STEP 2 · code -->
+  <div x-show="step===2" x-transition>
+    <h1 class="text-2xl font-extrabold tracking-tight">Enter the code</h1>
+    <p class="text-ink2 mt-1 text-sm">We sent a 6-digit code to <span class="text-slate-200 font-medium" x-text="email"></span>.</p>
+    <div class="flex gap-2.5 mt-7" @paste="onPaste($event)">
+      <template x-for="(d,i) in digits" :key="i">
+        <input :id="'r'+i" x-model="digits[i]" @input="onInput(i,$event)" @keydown="onKey(i,$event)" inputmode="numeric" maxlength="1"
+          class="field w-full h-14 text-center text-xl font-bold rounded-xl bg-white/[.04] border hairline outline-none"/>
+      </template>
+    </div>
+    <p x-show="error" x-text="error" class="text-sm text-danger mt-4"></p>
+    <button @click="verifyCode()" :disabled="loading || code().length<6" class="btn-press w-full h-12 mt-6 rounded-xl bg-brand hover:bg-brand-600 text-white font-semibold shadow-glow disabled:opacity-50 flex items-center justify-center gap-2">
+      <svg x-show="loading" class="w-4 h-4 spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M21 12a9 9 0 1 1-6.2-8.5" stroke-linecap="round"/></svg>
+      <span x-text="loading?'Checking…':'Continue'"></span>
+    </button>
+    <button @click="step=1;error=''" class="w-full text-center text-sm text-ink2 mt-4 hover:text-slate-100">Use a different email</button>
+  </div>
+
+  <!-- STEP 3 · new password -->
+  <div x-show="step===3" x-transition>
+    <h1 class="text-2xl font-extrabold tracking-tight">Set a new password</h1>
+    <p class="text-ink2 mt-1 text-sm">Choose a strong password you haven't used before.</p>
+    <form @submit.prevent="setNew()" class="mt-7 space-y-4" novalidate>
+      <div>
+        <label class="text-xs font-medium text-ink2">New password</label>
+        <div class="field mt-1.5 flex items-center gap-2 px-3.5 h-12 rounded-xl bg-white/[.04] border hairline">
+          <svg class="w-4 h-4 text-ink2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <input x-model="password" @input="score=Pulse.strength(password)" :type="show?'text':'password'" placeholder="New password" class="flex-1 bg-transparent outline-none text-sm"/>
+          <button type="button" @click="show=!show" class="text-ink2 hover:text-slate-100 text-xs" x-text="show?'Hide':'Show'"></button>
+        </div>
+        <div x-show="password" class="mt-2 flex gap-1">
+          <template x-for="i in 4" :key="i"><div class="h-1.5 flex-1 rounded-full" :class="i<=score ? ['bg-danger','bg-danger','bg-warn','bg-brand','bg-ok'][score] : 'bg-white/10'"></div></template>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs font-medium text-ink2">Confirm password</label>
+        <div class="field mt-1.5 flex items-center gap-2 px-3.5 h-12 rounded-xl bg-white/[.04] border hairline">
+          <svg class="w-4 h-4 text-ink2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <input x-model="password2" :type="show?'text':'password'" placeholder="Repeat password" class="flex-1 bg-transparent outline-none text-sm"/>
+        </div>
+      </div>
+      <p x-show="error" x-text="error" class="text-sm text-danger"></p>
+      <button :disabled="loading" class="btn-press w-full h-12 rounded-xl bg-brand hover:bg-brand-600 text-white font-semibold shadow-glow disabled:opacity-60 flex items-center justify-center gap-2">
+        <svg x-show="loading" class="w-4 h-4 spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M21 12a9 9 0 1 1-6.2-8.5" stroke-linecap="round"/></svg>
+        <span x-text="loading?'Saving…':'Reset password'"></span>
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+function forgotForm(){ return {
+  step:1, email:'', digits:['','','','','',''], password:'', password2:'',
+  show:false, loading:false, error:'', score:0,
+  code(){ return this.digits.join(''); },
+  onInput(i,e){ const v=e.target.value.replace(/\D/g,''); this.digits[i]=v.slice(-1)||''; if(this.digits[i] && i<5) document.getElementById('r'+(i+1)).focus(); },
+  onKey(i,e){ if(e.key==='Backspace' && !this.digits[i] && i>0) document.getElementById('r'+(i-1)).focus(); },
+  onPaste(e){ const t=(e.clipboardData.getData('text')||'').replace(/\D/g,'').slice(0,6); if(!t) return; e.preventDefault(); for(let i=0;i<6;i++) this.digits[i]=t[i]||''; },
+  async sendCode(){
+    this.error=''; if(!this.email){ this.error='Please enter your email.'; return; }
+    this.loading=true;
+    const {ok,data} = await Pulse.post('/auth/forget-password/otp/', {email:this.email});
+    this.loading=false;
+    if(ok){ Pulse.toast('Reset code sent ✉️'); this.step=2; this.$nextTick(()=>document.getElementById('r0')?.focus()); }
+    else { this.error = Pulse.msg(data,'We could not find that account.'); }
+  },
+  async verifyCode(){
+    this.error=''; if(this.code().length<6) return;
+    this.loading=true;
+    const {ok,status,data} = await Pulse.post('/auth/forget-password/otp/verify/', {email:this.email, code:this.code()});
+    this.loading=false;
+    if(ok || status===200){ this.step=3; }
+    else { this.error = Pulse.msg(data,'Invalid or expired code.'); }
+  },
+  async setNew(){
+    this.error='';
+    if(this.score<4){ this.error='Password needs 8+ chars with upper, lower, number and a symbol.'; return; }
+    if(this.password!==this.password2){ this.error='Passwords do not match.'; return; }
+    this.loading=true;
+    const {ok,data} = await Pulse.post('/auth/forget-password/set/', {email:this.email, new_password:this.password, new_password_again:this.password2});
+    this.loading=false;
+    if(ok){ Pulse.toast('Password updated 🎉'); setTimeout(()=>location.href='/login/', 800); }
+    else { this.error = Pulse.msg(data,'Could not update password. The code may have expired.'); }
+  }
+}}
+</script>
+{% endblock %}
