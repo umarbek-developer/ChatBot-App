@@ -1,2 +1,6 @@
 -r common.txt
+
+# ASGI server. Daphne (in common.txt) is the primary server; gunicorn +
+# uvicorn worker is provided as an alternative HTTP front if ever needed.
 gunicorn
+uvicorn

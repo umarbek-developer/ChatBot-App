@@ -1,0 +1,18 @@
+[Unit]
+# Celery worker — runs @shared_task jobs (OTP e-mail, group invite cleanup, ...).
+# Requires Redis (broker + result backend, db 0).
+Description=Celery worker for ChatBot-App
+After=network.target redis-server.service
+Wants=redis-server.service
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/ChatBot-App/src
+Environment=DJANGO_SETTINGS_MODULE=config.settings
+ExecStart=/srv/ChatBot-App/venv/bin/celery -A config worker -l info --concurrency=2
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

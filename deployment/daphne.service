@@ -1,0 +1,20 @@
+[Unit]
+# ASGI application server (Daphne) — serves BOTH HTTP and WebSocket for the
+# Channels app. This replaces the old WSGI gunicorn unit, which could not serve
+# ws/chat and ws/call.
+Description=Daphne ASGI server for ChatBot-App
+After=network.target redis-server.service postgresql.service
+Wants=redis-server.service
+
+[Service]
+User=www-data
+Group=www-data
+# Loyihangiz joylashgan yo'lga moslang. src/ — Django ildizi (manage.py shu yerda).
+WorkingDirectory=/srv/ChatBot-App/src
+Environment=DJANGO_SETTINGS_MODULE=config.settings
+ExecStart=/srv/ChatBot-App/venv/bin/daphne -b 127.0.0.1 -p 8001 config.asgi:application
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -7,7 +7,7 @@ from datetime import timedelta
 
 ALLOWED_HOSTS = env("ALLOWED_HOSTS").split(",")
 
-MIDDLEWARE += ['corsheaders.middleware.CorsMiddleware', ]
+# CorsMiddleware is already present in base.MIDDLEWARE — do not add it twice.
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 
@@ -35,3 +35,16 @@ SIMPLE_JWT = {
 
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in env("CSRF_TRUSTED_ORIGINS").split(",")]
 CORS_ALLOWED_ORIGINS = [o.strip() for o in env("CORS_ALLOWED_ORIGINS").split(",")]
+
+# --- HTTPS hardening ---
+# Opt-in (set SECURE_SSL=1 in .env) so a first plain-HTTP bring-up isn't broken
+# by a redirect loop. Enable AFTER TLS (certbot) is working. nginx forwards the
+# real scheme via X-Forwarded-Proto, which SECURE_PROXY_SSL_HEADER trusts.
+if env.bool("SECURE_SSL", default=False):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=31536000)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True

@@ -2,9 +2,10 @@
 import os
 from celery import Celery
 
-# Django sozlamalari faylini Celery-ga tanishtiramiz
-# 'config.settings' qismini loyihangizga qarab o'zgartiring (masalan: 'src.settings')
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.base')
+# Django sozlamalari faylini Celery-ga tanishtiramiz.
+# 'config.settings' paketi DEBUG qiymatiga qarab development/production ni tanlaydi
+# (config.settings.base emas — aks holda prod sozlamalari e'tiborga olinmaydi).
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
 # Celery ilovasini yaratamiz (loyiha nomini xohlagancha yozish mumkin)
 app = Celery('ziyodev_django_project')

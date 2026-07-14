@@ -92,6 +92,17 @@ ASGI_APPLICATION = 'config.asgi.application'
 REDIS_HOST = env("REDIS_HOST", default="").strip() or "127.0.0.1"
 _redis_port = env("REDIS_PORT", default="").strip()
 REDIS_PORT = int(_redis_port) if _redis_port.isdigit() else 6379
+REDIS_PASSWORD = env("REDIS_PASSWORD", default="").strip()
+
+# Build a redis:// URL for a given logical db, embedding auth when a password is
+# configured. Logical dbs are kept separate: Celery broker/result (0), the
+# channel layer (1) and ephemeral realtime state (2).
+_redis_auth = f":{REDIS_PASSWORD}@" if REDIS_PASSWORD else ""
+
+
+def _redis_url(db):
+    return f"redis://{_redis_auth}{REDIS_HOST}:{REDIS_PORT}/{db}"
+
 
 # Redis-backed channel layer: required for cross-process fan-out (multiple
 # Daphne/Uvicorn workers) and the ephemeral presence/typing state below.
@@ -99,7 +110,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [(REDIS_HOST, REDIS_PORT)],
+            "hosts": [_redis_url(1)],
             "capacity": 1500,
             "expiry": 10,
         },
@@ -108,7 +119,7 @@ CHANNEL_LAYERS = {
 
 # Dedicated Redis connection (db 2) for ephemeral realtime state — presence
 # sets, last-seen, typing/recording throttles — kept out of the Celery broker db.
-REDIS_REALTIME_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/2"
+REDIS_REALTIME_URL = _redis_url(2)
 
 
 
@@ -260,14 +271,16 @@ LOGGING = {
 }
 
 
-# CELERY SOZLAMALARI
+# ---- Celery ----
+# Prefer explicit env overrides (e.g. a remote or passworded broker); otherwise
+# fall back to the local Redis (db 0) derived above so REDIS_PASSWORD is honoured.
+CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="").strip() or _redis_url(0)
+CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default="").strip() or _redis_url(0)
 
-CELERY_BROKER_URL = 'redis://localhost:6379/0'  # yoki Docker bo'lsa: redis://redis_br:6379/0
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
-
-# Agar SQLite bazadan broker sifatida foydalanmoqchi bo'lsangiz:
-# CELERY_BROKER_URL = 'sqla+sqlite:///db.sqlite3'
-# CELERY_RESULT_BACKEND = 'db+sqlite:///db.sqlite3'
+# autodiscover_tasks() only scans INSTALLED_APPS. send_otp_email_task lives under
+# api/ (not an installed app), so the worker must import it explicitly or it will
+# reject the message with "unregistered task" — and OTP email uses Celery in prod.
+CELERY_IMPORTS = ("api.auth.tasks",)
 
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
